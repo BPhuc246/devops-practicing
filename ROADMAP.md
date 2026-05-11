@@ -1,13 +1,12 @@
-
 # ROADMAP PRACTICING DEVOPS
 
-## Phase 1 — Build app cơ bản  
+## Phase 1 — Build app cơ bản
 
-- Goal: 
-    + Xây dựng hoàn chỉnh một ứng dụng Todo fullstack có thể chạy được trên máy local
-    + Hiểu luồng dữ liệu từ Database → Backend API → Frontend và ngược lại
-    + Làm quen với cấu trúc project thực tế, tổ chức code rõ ràng, tách biệt từng layer
-    + 
+- Goal:
+  - Xây dựng hoàn chỉnh một ứng dụng Todo fullstack có thể chạy được trên máy local
+  - Hiểu luồng dữ liệu từ Database → Backend API → Frontend và ngược lại
+  - Làm quen với cấu trúc project thực tế, tổ chức code rõ ràng, tách biệt từng layer
+  -
 
 - Frontend: React + Tailwind
 
@@ -37,24 +36,47 @@ todo-app/
 
 ## Phase 2 — Dockerize app
 
+- Create `.dockerignore` for frontend and backend and set up for it: avoid copy node_module, env, git ( too long )
 
+- Paste these cmd line in each frontend path and backend path:
+
+  **Build image from Dockerfile:**
+  `docker build -t <name-container> .`
+  - `build` — read Dockerfile and create image
+  - `-t <name-container>` — name for image (ví dụ: `todo-backend`)
+  - `.` — build context is the current folder (where store Dockerfile)
+
+  **Run container from image built:**
+  `docker run -p <PORT:PORT> --name <name> --env-file .env <name-container>`
+  - `run` — create and start container from image
+  - `-p 3001:3001` — map port to main: port trong container
+  - `--name <name>` — name for container (e.g: `todo-backend-container`)
+  - `--env-file .env` — pass environment variables file `.env` into container
+  - `<name-container>` — image name used to create container
+
+  ### Build in frontend has file .env: `docker build --build-arg VITE_BACKEND_URL=<URL> -t <name-container> .`
+  - `--build-arg`: read var vite_backend_url from .env
+
+```bash
+  docker ps                        # Watch containers running
+  docker logs <name container>   # Watch log ogg container
+  docker stop <name container>   # Stop container
+  docker rm <name container>     # Delete container
+```
+
+docker build -t pern-frontend .
+docker run -p 5173:5173 --name frontend --env-file .env pern-frontend
 
 ## Phase 3 — Docker Compose
 
-
 ## Phase 3.5 — Secrets Management
-
 
 ## Phase 4 — CI/CD với GitHub Actions
 
-
 ## Phase 5 — Deploy VPS + Nginx + Domain + Security
-
 
 ## Phase 6 — Kubernetes (local với minikube trước)
 
-
 ## Phase 7 — Monitoring & Logging (Prometheus + Grafana + Loki)
-
 
 ## Phase 8 — Infrastructure as Code (Terraform + Ansible)
