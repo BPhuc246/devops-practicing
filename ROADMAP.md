@@ -13,6 +13,7 @@
 
 - Backend: Nodejs + Express + Postgresql
 
+```
 todo-app/
 ├── backend/
 │   ├── src/
@@ -32,9 +33,10 @@ todo-app/
     │       └── AddTodo.jsx    # Form thêm todo mới
     ├── vite.config.js         # Proxy /api → localhost:3001
     └── package.json
-
+```
 
 ## Phase 2 — Dockerize app
+
 
 
 ## Phase 3 — Docker Compose
