@@ -1,0 +1,36 @@
+services:
+    database:
+        image: postgres:16-alpine
+        container_name: postgres
+        restart: always
+        env_file:
+            - ./backend/.env
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+
+    backend:
+        build: ./backend
+        container_name: backend
+        restart: always
+        env_file:
+            - ./backend/.env
+        ports: 
+            - "3001:3001"
+            
+    frontend:
+        build: 
+            context: ./frontend
+            args:
+                - VITE_BACKEND_URL=${VITE_BACKEND_URL}
+        container_name: frontend
+        restart: always
+        env_file:
+            - ./frontend/.env
+        ports: 
+            - "5173:5173"
+        depends_on:
+            - backend
+volumes:
+    postgres_data:  
