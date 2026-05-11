@@ -34,6 +34,7 @@ todo-app/
     └── package.json
 ```
 
+
 ## Phase 2 — Dockerize app
 
 - Create `.dockerignore` for frontend and backend and set up for it: avoid copy node_module, env, git ( too long )
@@ -67,7 +68,25 @@ todo-app/
 docker build -t pern-frontend .
 docker run -p 5173:5173 --name frontend --env-file .env pern-frontend
 
+
 ## Phase 3 — Docker Compose
+
+- Goal: Start several services at the same time
+
+- Create file ``docker-compose.yml` in folder contained frontend and backend folder.
+
+- `docker compose up --build` đọc `compose.yml` 
+
+Find by key word `docker compose` to have more details 
+
+```bash
+  docker compose up --build      # Build image and start all
+  docker compose up -d --build   # Detached
+  docker compose down            # Stop and delete containers
+  docker compose down -v         # Stop and delete volume (lost data)
+  docker compose logs backend    # Watch log of service backend
+  docker compose ps              # Watch status of service
+```
 
 ## Phase 3.5 — Secrets Management
 
