@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Lint frontend
-        working-directory: frontend
+        working-directory: app/frontend
         run: npm run lint --max-warnings=0
 
       - name: Build backend image
@@ -44,4 +44,4 @@ jobs:
       - name: Build frontend image
         run: docker build
           --build-arg VITE_BACKEND_URL=http://localhost:3001
-          -t frontend ./frontend
+          -t frontend ./app/frontend
