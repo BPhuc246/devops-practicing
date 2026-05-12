@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --cream: #F7F3ED;
-  --ink: #1A1510;
-  --rust: #C4622D;
-  --sage: #4A7C59;
-  --amber: #D4A017;
-  --muted: #8B7D6B;
-  --border: #E0D8CE;
+  --cream: #f7f3ed;
+  --ink: #1a1510;
+  --rust: #c4622d;
+  --sage: #4a7c59;
+  --amber: #d4a017;
+  --muted: #8b7d6b;
+  --border: #e0d8ce;
 }
 
 * {
@@ -19,11 +19,19 @@
 body {
   background-color: var(--cream);
   color: var(--ink);
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   min-height: 100vh;
-  background-image: 
-    radial-gradient(ellipse at 20% 0%, rgba(196, 98, 45, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 100%, rgba(74, 124, 89, 0.06) 0%, transparent 60%);
+  background-image:
+    radial-gradient(
+      ellipse at 20% 0%,
+      rgba(196, 98, 45, 0.06) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 80% 100%,
+      rgba(74, 124, 89, 0.06) 0%,
+      transparent 60%
+    );
 }
 
 .checkbox-custom {
@@ -44,7 +52,7 @@ body {
 }
 
 .checkbox-custom:checked::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 5px;
   top: 2px;
@@ -60,6 +68,13 @@ body {
   border-color: var(--sage);
 }
 
-.scrollbar-thin::-webkit-scrollbar { width: 4px; }
-.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}

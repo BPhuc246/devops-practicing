@@ -1,5 +1,9 @@
-const { Pool } = require("pg");
-require("dotenv").config();
+import pg from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const { Pool } = pg;
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -9,7 +13,7 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-const initDB = async () => {
+export const initDB = async () => {
   const client = await pool.connect();
   try {
     await client.query(`
@@ -22,12 +26,12 @@ const initDB = async () => {
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log("✅ Database initialized");
+    console.log('✅ Database initialized');
   } catch (err) {
-    console.error("❌ DB init error:", err.message);
+    console.error('❌ DB init error:', err.message);
   } finally {
     client.release();
   }
 };
 
-module.exports = { pool, initDB };
+export default pool;
