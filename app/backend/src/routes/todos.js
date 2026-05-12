@@ -1,13 +1,12 @@
-const express = require("express");
+import express from 'express';
+import pool from '../db';
+
 const router = express.Router();
-const { pool } = require("../db");
 
 // GET all todos
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      "SELECT * FROM todos ORDER BY created_at DESC",
-    );
+    const { rows } = await pool.query('SELECT * FROM todos ORDER BY created_at DESC');
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -15,18 +14,18 @@ router.get("/", async (req, res) => {
 });
 
 // POST create todo
-router.post("/", async (req, res) => {
-  const VALID_PRIORITIES = ["low", "medium", "high"];
-  const { title, priority = "medium" } = req.body;
+router.post('/', async (req, res) => {
+  const VALID_PRIORITIES = ['low', 'medium', 'high'];
+  const { title, priority = 'medium' } = req.body;
   if (priority && !VALID_PRIORITIES.includes(priority)) {
-    return res.status(400).json({ error: "Invalid priority" });
+    return res.status(400).json({ error: 'Invalid priority' });
   }
   if (!title?.trim()) {
-    return res.status(400).json({ error: "Title is required" });
+    return res.status(400).json({ error: 'Title is required' });
   }
   try {
     const { rows } = await pool.query(
-      "INSERT INTO todos (title, priority) VALUES ($1, $2) RETURNING *",
+      'INSERT INTO todos (title, priority) VALUES ($1, $2) RETURNING *',
       [title.trim(), priority],
     );
     res.status(201).json(rows[0]);
@@ -36,9 +35,9 @@ router.post("/", async (req, res) => {
 });
 
 // PATCH toggle completed
-router.patch("/:id/toggle", async (req, res) => {
+router.patch('/:id/toggle', async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
   try {
     const { rows } = await pool.query(
       `UPDATE todos
@@ -46,7 +45,7 @@ router.patch("/:id/toggle", async (req, res) => {
        WHERE id = $1 RETURNING *`,
       [id],
     );
-    if (!rows.length) return res.status(404).json({ error: "Not found" });
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -54,18 +53,18 @@ router.patch("/:id/toggle", async (req, res) => {
 });
 
 // PUT update todo
-router.put("/:id", async (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
 
-  const VALID_PRIORITIES = ["low", "medium", "high"];
-  const { title, priority = "medium" } = req.body;
+  const VALID_PRIORITIES = ['low', 'medium', 'high'];
+  const { title, priority = 'medium' } = req.body;
   if (priority && !VALID_PRIORITIES.includes(priority)) {
-    return res.status(400).json({ error: "Invalid priority" });
+    return res.status(400).json({ error: 'Invalid priority' });
   }
 
   if (!title?.trim()) {
-    return res.status(400).json({ error: "Title is required" });
+    return res.status(400).json({ error: 'Title is required' });
   }
   try {
     const { rows } = await pool.query(
@@ -73,7 +72,7 @@ router.put("/:id", async (req, res) => {
        WHERE id = $3 RETURNING *`,
       [title.trim(), priority, id],
     );
-    if (!rows.length) return res.status(404).json({ error: "Not found" });
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -81,11 +80,9 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE all completed
-router.delete("/completed/all", async (req, res) => {
+router.delete('/completed/all', async (req, res) => {
   try {
-    const { rowCount } = await pool.query(
-      "DELETE FROM todos WHERE completed = TRUE",
-    );
+    const { rowCount } = await pool.query('DELETE FROM todos WHERE completed = TRUE');
     res.json({ message: `Deleted ${rowCount} completed todos` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -93,19 +90,16 @@ router.delete("/completed/all", async (req, res) => {
 });
 
 // DELETE todo
-router.delete("/:id", async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
   try {
-    const { rows } = await pool.query(
-      "DELETE FROM todos WHERE id = $1 RETURNING *",
-      [id],
-    );
-    if (!rows.length) return res.status(404).json({ error: "Not found" });
-    res.json({ message: "Deleted", todo: rows[0] });
+    const { rows } = await pool.query('DELETE FROM todos WHERE id = $1 RETURNING *', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Deleted', todo: rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-module.exports = router;
+export default router;
