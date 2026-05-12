@@ -3,9 +3,9 @@ name: build-and-lint
 # Trigger when this workflow run
 on:
   push:
-    branches: [main, dev] # push to main or dev
+    branches: ['**'] # push from all branches
   pull_request:
-    branches: [main, dev] # pull from main or dev
+    branches: [main] # pull from main
 
 jobs:
   build-and-lint:
