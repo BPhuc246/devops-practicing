@@ -27,7 +27,7 @@ jobs:
         run: npm ci
 
       - name: Lint backend
-        working-directory: backend
+        working-directory: app/backend
         run: npm run lint --max-warnings=0
 
       - name: Frontend install dependencies
