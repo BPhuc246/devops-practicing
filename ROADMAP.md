@@ -90,6 +90,11 @@ Find by key word `docker compose` to have more details
 
 ## Phase 3.5 — Secrets Management
 
+`Rule 1`: Ensure .env in file .gitignore
+`Rule 2`: No fallback password in source code
+`Rule 3`: Backend validated environment variable
+`Rule 4`: Check git history: `git log --all --full-history -- **/.env`
+
 ## Phase 4 — CI/CD với GitHub Actions
 
 ## Phase 5 — Deploy VPS + Nginx + Domain + Security
