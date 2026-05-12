@@ -3,45 +3,45 @@ name: build-and-lint
 # Trigger when this workflow run
 on:
   push:
-    branches: ['**'] # push from all branches
+    branches: ["**"] # push from all branches
   pull_request:
     branches: [main] # pull from main
 
 jobs:
   build-and-lint:
     runs-on: ubuntu-latest # run on VM of github
+    
+    steps:
+      # Clone code to VM
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-  steps:
-    # Clone code to VM
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      # Install nodejs on VM
+      - name: Setup repo
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
 
-    # Install nodejs on VM
-    - name: Setup repo
-      uses: actions/setup-node@v3
-      with:
-        node-version: 20
+      - name: Backend install dependencies
+        working-directory: backend
+        run: npm ci
 
-    - name: Backend install dependencies
-      working-directory: backend
-      run: npm ci
+      - name: Lint backend
+        working-directory: backend
+        run: npm run lint --max-warnings=0
 
-    - name: Lint backend
-      working-directory: backend
-      run: npm run lint --max-warnings=0
+      - name: Frontend install dependencies
+        working-directory: frontend
+        run: npm ci
 
-    - name: Frontend install dependencies
-      working-directory: frontend
-      run: npm ci
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint --max-warnings=0
 
-    - name: Lint frontend
-      working-directory: frontend
-      run: npm run lint --max-warnings=0
+      - name: Build backend image
+        run: docker build -t backend ./app/backend
 
-    - name: Build backend image
-      run: docker build -t backend ./app/backend
-
-    - name: Build frontend image
-      run: docker build
-        --build-arg VITE_BACKEND_URL=http://localhost:3001
-        -t frontend ./frontend
+      - name: Build frontend image
+        run: docker build
+          --build-arg VITE_BACKEND_URL=http://localhost:3001
+          -t frontend ./frontend
