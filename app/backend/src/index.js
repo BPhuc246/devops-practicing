@@ -1,6 +1,6 @@
 import express from 'express';
-import { initDB } from './db';
-import todosRouter from './routes/todos';
+import { initDB } from '../src/db.js';
+import todosRouter from './routes/todos.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
