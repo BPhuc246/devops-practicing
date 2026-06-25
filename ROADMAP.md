@@ -34,7 +34,6 @@ todo-app/
     └── package.json
 ```
 
-
 ## Phase 2 — Dockerize app
 
 - Create `.dockerignore` for frontend and backend and set up for it: avoid copy node_module, env, git ( too long )
@@ -68,16 +67,15 @@ todo-app/
 docker build -t pern-frontend .
 docker run -p 5173:5173 --name frontend --env-file .env pern-frontend
 
-
 ## Phase 3 — Docker Compose
 
 - Goal: Start several services at the same time
 
 - Create file ``docker-compose.yml` in folder contained frontend and backend folder.
 
-- `docker compose up --build` đọc `compose.yml` 
+- `docker compose up --build` đọc `compose.yml`
 
-Find by key word `docker compose` to have more details 
+Find by key word `docker compose` to have more details
 
 ```bash
   docker compose up --build      # Build image and start all
@@ -97,7 +95,26 @@ Find by key word `docker compose` to have more details
 
 ## Phase 4 — CI/CD với GitHub Actions
 
-## Phase 5 — Deploy VPS + Nginx + Domain + Security
+CI (Continuous Integration): Automatically checks code quality and runs tests whenever code is pushed or a pull request is created
+CD (Continuous Deployment / Delivery): Automatically deploys the application after the CI process passes successfully.
+
+- Create file `.github/workflows/ci.yml` in folder cotain frontend and backend:
+  - Install dependencies
+  - Run ESLint
+  - Check code formatting
+  - Validate build/test process
+
+- Configure `eslint.config.js` and `.prettierrc` in backend and frontend folder: to check format code:
+  - Maintain consistent code style
+  - Detect common coding issues
+  - Prevent unused variables and formatting mistakes
+
+- Setting `script` in `package.json` from both frontend and backend --> Run the following command to check for linting errors `npm run lint`
+
+## Phase 5 — Deploy VPS + Nginx + Security
+
+### Azura Cloud ( Free student email account )
+- Set up virtual machine to host: https://www.youtube.com/watch?v=W-k3GGv8jto
 
 ## Phase 6 — Kubernetes (local với minikube trước)
 
