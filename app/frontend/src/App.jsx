@@ -75,7 +75,11 @@ export default function App() {
     }
   };
 
-  const filtered = todos.filter((t) => {
+  console.log("todos =", todos);
+  console.log("Array?", Array.isArray(todos));
+  console.log("typeof =", typeof todos);
+
+  const filtered = (todos || []).filter((t) => {
     if (filter === "Đang làm") return !t.completed;
     if (filter === "Hoàn thành") return t.completed;
     return true;
