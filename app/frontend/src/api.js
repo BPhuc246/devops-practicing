@@ -3,9 +3,6 @@ import axios from "axios";
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_BACKEND_URL}/api`,
 });
-// const api = axios.create({
-//   baseURL: `${import.meta.env.VITE_BACKEND_URL}/api`,
-// });
 
 export const getTodos = () => api.get("/todos").then((r) => r.data);
 export const createTodo = (data) =>
