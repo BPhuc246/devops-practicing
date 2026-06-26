@@ -1,5 +1,5 @@
 # Base image — using Node.js version 20, Alpine Linux (light: ~5MB instead of ~900MB)
-FROM node:20-alpine 
+FROM node:20-alpine AS builder
 
 # Create a folder worrking inside container, every code runs in /app
 WORKDIR /app
@@ -14,15 +14,18 @@ RUN npm install
 COPY . .
 
 # get from --build-arg
-ARG VITE_BACKEND_URL              
+ARG VITE_BACKEND_URL
 
 # expose ra environment
-ENV VITE_BACKEND_URL=$VITE_BACKEND_URL 
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 
 RUN npm run build
 
-# Initialize container will listen port 5173
-EXPOSE 5173
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Code run when container start 
-CMD [ "npm", "run", "preview" ]
+# Initialize container will listen port 80
+EXPOSE 80
+
+# Code run when container start
+CMD ["nginx", "-g", "daemon off;"]
