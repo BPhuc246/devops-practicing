@@ -111,70 +111,208 @@ CD (Continuous Deployment / Delivery): Automatically deploys the application aft
 
 - Setting `script` in `package.json` from both frontend and backend --> Run the following command to check for linting errors `npm run lint`
 
-## Phase 5 — Deploy VPS + Nginx + Security ( Domain -> not free )
+## Phase 5 — Deploy to Azure VM + Docker + Nginx
 
-  - Goal: Deploy your Dockerized full-stack Todo application to a Linux server on Azure and access it from any browser using the VM's public IP.
+- Goal: Deploy your Dockerized full-stack Todo application to an Ubuntu Virtual Machine on Azure and access it from any browser using the VM's public IP.
 
-**Azura Cloud ( Free 100$ for student email account )**
-### 1. Set up virtual machine to host ( for learning only )
+> **Note**
+>
+> This guide is intended for learning purposes only.
 
-  *Why create virutal machine ?*
-  => A Virtual Machine (VM) is simply another computer running in Microsoft's cloud.
-  Instead of hosting your website on your own laptop (which must stay on 24/7), you host it on the VM so anyone on the Internet can access it.
+### 1. Create an Azure Virtual Machine
+*Why do we need a Virtual Machine?*
+A **Virtual Machine (VM)** is simply another computer running in Microsoft's cloud.
+Instead of hosting your application on your own laptop (which must stay online 24/7), you host it on a VM so anyone on the Internet can access it anytime.
 
-  Step 1: Go to virtual machine section in Azure -> Click create
-  Step 2: Basic Config
-    + Basic: 
-      - Subscription: create your own resource group
-      - Virutal machine name: give it the name
-      - Choose the region: Choose the region closest to your location ( Closer regions usually mean lower latency )
-      - Availability Options: Choose `No infracstructure redundancy required` ( for learning, this is enough )
-      - Image: Choose Ubuntu Server @lastest_version ( Most cloud servers use Linux )
-      - Security type: Keep the default.
-      - Authentication type: Choose password ( Passwords are easier for beginners while learning Linux ) 
-        -> name: This is the Linux account you'll use after connecting, and passowrd's length is 12 
-      - Inbound port rules ( important ): give it default for test only ( you can change it later in networking tab after create vm )
-        e.g: port 22 -> Allows SSH connection  |  port 80 -> Allows browsers to access your website
-    + Disks:
-      - OS disk type: Standard SSD ( Fast enough and cheaper than Premium SSD ) 
-    + Networking: Default
-    + Management:
-      - Auto-shutdown: tick enable auto-shutdown -> choose the time to shutdown ( save money )
-    + Monitoring: Default ( Monitoring services cost money and are unnecessary for a beginner )
-    + Advances: Default
-    + Tags: Choose name and value if you want
-      e.g: name: owner - value: adminphuc
-    + Review + Create: Wait until deployment succeeds.
+#### Step 1 — Create a Virtual Machine
+Go to:
+> **Azure Portal → Virtual Machines → Create**
 
-### 2. Connect virtual machine ( for learning only )
-*Attention: turn off virtual machine when not learn to save money*
-  Step 1 Go to virtual machine you created, click connect and start vm
-  Step 2 Connect by `ssh <name>@<IP_PUBlIC_VIRTUAL_MACHINE>` in command prompt ( wsl )
-  Step 3: Go to networking section -> create port rule -> inbound port rule -> destination port ranges edit into 80 for web  -> give the name for that settings then add --> Successfully -> Action is allow 
+### Basic
 
-### 3. Host web with ip of virtual machine ( for learning only )
-*Install wsl: https://learn.microsoft.com/en-us/windows/wsl/install* -> Get used to learn linux
-  Step 1: Push code to github 
-  Step 2: Install docker {
-    `sudo apt update`
-    `sudo apt upgrade -y` -> Update packages
-    `sudo apt install docker.io -y` -> Install docker
-    `sudo usermod -aG docker $USER` -> Add your user to Docker group, otherwise every Docker command requires sudo docker ...
-  }
-  Step 3: Paste `git clone https://github.com/<your_name>/<project_name>`
-  Step 4: Navigate to frontend folder -> edit .env file by `nano` command -> VITE_BACKEND_UR=<IP_VM:PORT_BACKEND>
-  Step 4.5: Edit in Dockerfile of frontend {
-    from `FROM node:20-alpine` to `FROM node:20-alpine AS builder`
-    add `FROM nginx:alpine`
-    add `COPY --from=builder /app/dist /usr/share/nginx/html`
-    from `EXPOSE 5173` to `EXPOSE 80`
-    from `CMD [ "npm", "run", "preview" ]` to `CMD ["nginx", "-g", "daemon off;"]`
-  }
-  Step 5: Navigate to backend folder -> edit .env file by `nano` command -> CLIENT_URL=<IP_VM>
-  Step 6: navigate to the folder cotain docker-compose.yml -> run `docker-compose up --build -d`
-  
---> Congrats Successfully -> Access the ip public of virtual will show your website ( `http://YOUR_PUBLIC_IP` )
+- **Subscription:** Your Azure subscription
+- **Resource Group:** Create a new one
+- **Virtual Machine Name:** Choose any name
+- **Region:** Choose the closest region to reduce latency
+- **Availability Options:** `No infrastructure redundancy required`
+- **Image:** Latest Ubuntu Server LTS
+- **Security Type:** Default
+- **Authentication Type:** Password
 
+Create:
+
+- Username
+- Password (minimum 12 characters)
+- 
+#### Inbound Port Rules
+For learning purposes, allow:
+- **SSH (22)** — Connect to the server
+- **HTTP (80)** — Allow browsers to access your website
+
+
+#### Disks
+Choose:
+- **Standard SSD**
+Fast enough and cheaper than Premium SSD.
+
+
+#### Networking
+Keep the default configuration.
+
+
+#### Management
+Enable:
+- **Auto Shutdown**
+Choose a shutdown time to avoid unnecessary Azure charges.
+
+
+#### Monitoring
+Keep the default settings.
+Monitoring services are unnecessary for beginners.
+
+
+#### Advanced
+Keep default settings.
+
+
+#### Tags (Optional)
+Example:
+| Name | Value |
+|------|------|
+| owner | your-name |
+
+---
+
+Click **Review + Create** and wait for deployment to finish.
+
+## 2. Connect to the Virtual Machine
+> **Important**
+>
+> Stop the VM when you're not using it to save Azure credits.
+### Step 1
+Start the VM.
+Go to:
+> **Virtual Machine → Connect**
+
+### Step 2
+Connect using SSH.
+```bash
+ssh <username>@<PUBLIC_IP>
+```
+Example:
+```bash
+ssh ubuntu@20.10.30.40
+```
+
+## Step 3
+Open HTTP traffic.
+Go to:
+> **Networking → Add inbound port rule**
+Allow:
+| Port | Purpose |
+|------|---------|
+| 80 | Website (HTTP) |
+Click **Add**.
+
+## 3. Deploy Your Application
+> **Prerequisite**
+>
+> Install WSL if you're using Windows:
+>
+> https://learn.microsoft.com/windows/wsl/install
+Using WSL helps you become familiar with Linux.
+
+### Step 1 — Push your code to GitHub
+Commit and push your latest project.
+
+### Step 2 — Install Docker
+Update packages:
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+Install Docker:
+```bash
+sudo apt install docker.io -y
+```
+
+Add your user to the Docker group:
+```bash
+sudo usermod -aG docker $USER
+```
+
+Log out and log back in for the changes to take effect.
+
+### Step 3 — Clone your repository
+```bash
+git clone https://github.com/<your-username>/<your-project>.git
+```
+
+Go to the project folder:
+```bash
+cd <your-project>
+```
+
+### Step 4 — Configure the Frontend
+Navigate to the frontend directory.
+Edit the `.env` file:
+```bash
+nano .env
+```
+
+Update:
+```env
+VITE_BACKEND_URL=http://<VM_PUBLIC_IP>:<BACKEND_PORT>
+```
+
+### Step 5 — Update the Frontend Dockerfile
+Replace your development Dockerfile with a production build.
+```dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+FROM nginx:alpine
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### Step 6 — Configure the Backend
+Navigate to the backend folder.
+Edit the `.env` file:
+```bash
+nano .env
+```
+
+Update:
+```env
+CLIENT_URL=http://<VM_PUBLIC_IP>
+```
+
+### Step 7 — Start the Containers
+Navigate to the folder containing `docker-compose.yml`.
+Run:
+```bash
+docker compose up --build -d
+```
+
+# 🎉 Done!
+Open your browser and visit:
+```text
+http://<VM_PUBLIC_IP>
+```
+Your Todo application should now be accessible from anywhere on the Internet.
 
 ## Phase 6 — Kubernetes (local với minikube trước)
 
