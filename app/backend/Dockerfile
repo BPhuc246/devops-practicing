@@ -13,8 +13,8 @@ RUN npm install
 # Copy source code into container ( run after npm install to take advantage cache )
 COPY . .
 
-# Initialize container will listen port 3001
-EXPOSE 3001
+# Initialize container will listen port 8080
+EXPOSE 8080
 
 # Code run when container start 
 CMD ["npm","start"]

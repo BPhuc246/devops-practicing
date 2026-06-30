@@ -1,56 +1,56 @@
 services:
-    database:
-        image: postgres:16-alpine
-        container_name: postgres
-        restart: always
-        env_file:
-            - ./backend/.env
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
-        expose:
-            - "5432"
-        networks:
-            - pern-net
+  database:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: always
+    env_file:
+      - ./backend/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - pern-net
 
-    backend:
-        build: ./backend
-        container_name: backend
-        restart: always
-        env_file:
-            - ./backend/.env
-        expose:
-            - "3001"
-        networks:
-            - pern-net
-            
-    frontend:
-        build: 
-            context: ./frontend
-            args:
-                VITE_BACKEND_URL: "/api"
-        container_name: frontend
-        restart: always
-        depends_on:
-            - backend
-        networks:
-            - pern-net
-    nginx:
-        image: nginx:alpine
-        container_name: nginx
-        restart: unless-stopped
-        volumes:
-            - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-        ports:
-            - "80:80"
-        depends_on:
-            - frontend
-            - backend
-        networks:
-            - pern-net
-        
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    expose:
+      - "8080"
+    networks:
+      - pern-net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_BACKEND_URL: "/api"
+    container_name: frontend
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - pern-net
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - pern-net
+
 volumes:
-    postgres_data:
+  postgres_data:
 
-networks: 
-    pern-net:
-        driver: bridge
+networks:
+  pern-net:
+    driver: bridge

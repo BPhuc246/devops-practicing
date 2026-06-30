@@ -43,5 +43,5 @@ jobs:
 
       - name: Build frontend image
         run: docker build
-          --build-arg VITE_BACKEND_URL=http://localhost:3001
+          --build-arg VITE_BACKEND_URL=http://localhost:8080
           -t frontend ./app/frontend
