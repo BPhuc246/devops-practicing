@@ -30,7 +30,7 @@ todo-app/
     │   └── components/
     │       ├── TodoItem.jsx   # Hiển thị + sửa + xoá từng todo
     │       └── AddTodo.jsx    # Form thêm todo mới
-    ├── vite.config.js         # Proxy /api → localhost:3001
+    ├── vite.config.js         # Proxy /api → localhost:8080
     └── package.json
 ```
 
@@ -49,7 +49,7 @@ todo-app/
   **Run container from image built:**
   `docker run -p <PORT:PORT> --name <name> --env-file .env <name-container>`
   - `run` — create and start container from image
-  - `-p 3001:3001` — map port to main: port trong container
+  - `-p 8080:8080` — map port to main: port trong container
   - `--name <name>` — name for container (e.g: `todo-backend-container`)
   - `--env-file .env` — pass environment variables file `.env` into container
   - `<name-container>` — image name used to create container
@@ -120,12 +120,15 @@ CD (Continuous Deployment / Delivery): Automatically deploys the application aft
 > This guide is intended for learning purposes only.
 
 ### 1. Create an Azure Virtual Machine
-*Why do we need a Virtual Machine?*
+
+_Why do we need a Virtual Machine?_
 A **Virtual Machine (VM)** is simply another computer running in Microsoft's cloud.
 Instead of hosting your application on your own laptop (which must stay online 24/7), you host it on a VM so anyone on the Internet can access it anytime.
 
 #### Step 1 — Create a Virtual Machine
+
 Go to:
+
 > **Azure Portal → Virtual Machines → Create**
 
 ### Basic
@@ -143,39 +146,44 @@ Create:
 
 - Username
 - Password (minimum 12 characters)
-- 
+-
+
 #### Inbound Port Rules
+
 For learning purposes, allow:
+
 - **SSH (22)** — Connect to the server
 - **HTTP (80)** — Allow browsers to access your website
 
-
 #### Disks
-Choose:
-- **Standard SSD**
-Fast enough and cheaper than Premium SSD.
 
+Choose:
+
+- **Standard SSD**
+  Fast enough and cheaper than Premium SSD.
 
 #### Networking
+
 Keep the default configuration.
 
-
 #### Management
-Enable:
-- **Auto Shutdown**
-Choose a shutdown time to avoid unnecessary Azure charges.
 
+Enable:
+
+- **Auto Shutdown**
+  Choose a shutdown time to avoid unnecessary Azure charges.
 
 #### Monitoring
+
 Keep the default settings.
 Monitoring services are unnecessary for beginners.
 
-
 #### Advanced
+
 Keep default settings.
 
-
 #### Tags (Optional)
+
 Example:
 | Name | Value |
 |------|------|
@@ -186,57 +194,74 @@ Example:
 Click **Review + Create** and wait for deployment to finish.
 
 ## 2. Connect to the Virtual Machine
+
 > **Important**
 >
 > Stop the VM when you're not using it to save Azure credits.
+
 ### Step 1
+
 Start the VM.
 Go to:
+
 > **Virtual Machine → Connect**
 
 ### Step 2
+
 Connect using SSH.
+
 ```bash
 ssh <username>@<PUBLIC_IP>
 ```
+
 Example:
+
 ```bash
 ssh ubuntu@20.10.30.40
 ```
 
 ## Step 3
+
 Open HTTP traffic.
 Go to:
+
 > **Networking → Add inbound port rule**
-Allow:
-| Port | Purpose |
-|------|---------|
-| 80 | Website (HTTP) |
-Click **Add**.
+> Allow:
+> | Port | Purpose |
+> |------|---------|
+> | 80 | Website (HTTP) |
+> Click **Add**.
 
 ## 3. Deploy Your Application
+
 > **Prerequisite**
 >
 > Install WSL if you're using Windows:
 >
 > https://learn.microsoft.com/windows/wsl/install
-Using WSL helps you become familiar with Linux.
+> Using WSL helps you become familiar with Linux.
 
 ### Step 1 — Push your code to GitHub
+
 Commit and push your latest project.
 
 ### Step 2 — Install Docker
+
 Update packages:
+
 ```bash
 sudo apt update
 sudo apt upgrade -y
 ```
+
 Install Docker:
+
 ```bash
 sudo apt install docker.io -y
 ```
 
 Add your user to the Docker group:
+
 ```bash
 sudo usermod -aG docker $USER
 ```
@@ -244,29 +269,36 @@ sudo usermod -aG docker $USER
 Log out and log back in for the changes to take effect.
 
 ### Step 3 — Clone your repository
+
 ```bash
 git clone https://github.com/<your-username>/<your-project>.git
 ```
 
 Go to the project folder:
+
 ```bash
 cd <your-project>
 ```
 
 ### Step 4 — Configure the Frontend
+
 Navigate to the frontend directory.
 Edit the `.env` file:
+
 ```bash
 nano .env
 ```
 
 Update:
+
 ```env
 VITE_BACKEND_URL=http://<VM_PUBLIC_IP>:<BACKEND_PORT>
 ```
 
 ### Step 5 — Update the Frontend Dockerfile
+
 Replace your development Dockerfile with a production build.
+
 ```dockerfile
 FROM node:20-alpine AS builder
 
@@ -289,32 +321,110 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 ### Step 6 — Configure the Backend
+
 Navigate to the backend folder.
 Edit the `.env` file:
+
 ```bash
 nano .env
 ```
 
 Update:
+
 ```env
 CLIENT_URL=http://<VM_PUBLIC_IP>
 ```
 
 ### Step 7 — Start the Containers
+
 Navigate to the folder containing `docker-compose.yml`.
 Run:
+
 ```bash
 docker compose up --build -d
 ```
 
 # 🎉 Done!
+
 Open your browser and visit:
+
 ```text
 http://<VM_PUBLIC_IP>
 ```
+
 Your Todo application should now be accessible from anywhere on the Internet.
 
-## Phase 6 — Kubernetes (local với minikube trước)
+## Phase 6 — Kubernetes (local with minikube first)
+
+### Kubernetes Resource Kinds
+
+Kubernetes manages applications using different resource kinds. Each kind serves a specific purpose within the cluster.
+
+| Kind                            | Purpose                                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Pod**                         | Runs one or more containers. The smallest deployable unit in Kubernetes.                                           |
+| **Deployment**                  | Manages Pods, handles rolling updates, and ensures the desired number of replicas are running.                     |
+| **ReplicaSet**                  | Maintains a stable set of identical Pods. Usually managed automatically by a Deployment.                           |
+| **Service**                     | Provides a stable network endpoint for accessing one or more Pods.                                                 |
+| **ConfigMap**                   | Stores non-sensitive configuration data such as environment variables or configuration files.                      |
+| **Secret**                      | Stores sensitive information such as passwords, API keys, and tokens.                                              |
+| **Namespace**                   | Organizes and isolates Kubernetes resources within a cluster.                                                      |
+| **Ingress**                     | Exposes HTTP/HTTPS routes from outside the cluster to Services inside the cluster.                                 |
+| **PersistentVolume (PV)**       | Represents a piece of persistent storage available to the cluster.                                                 |
+| **PersistentVolumeClaim (PVC)** | Requests persistent storage from a PersistentVolume.                                                               |
+| **StorageClass**                | Defines how PersistentVolumes are dynamically provisioned.                                                         |
+| **NetworkPolicy**               | Controls network communication between Pods for security purposes.                                                 |
+| **StatefulSet**                 | Manages stateful applications such as PostgreSQL, MySQL, or MongoDB with stable identities and persistent storage. |
+| **DaemonSet**                   | Ensures that one Pod runs on every node (or a selected group of nodes).                                            |
+| **Job**                         | Executes a task once until it successfully completes.                                                              |
+| **CronJob**                     | Schedules Jobs to run automatically at specified times using cron syntax.  
+
+//
+minikube delete -> minikube start -drive=docker
+
+docker build --build-arg VITE_BACKEND_URL=http://localhost:8080 -t frontend:local .
+docker build -t backend:local .
+
+minikube image load backend:local
+minikube image load frontend:local
+
+kubectl apply -f k8s/frontend.yml
+kubectl apply -f k8s/backend.yml
+kubectl apply -f k8s/postgres.yml
+
+kubectl -n todoapp wait --for=condition=ready pod -l app=postgres --timeout=180s
+kubectl -n todoapp wait --for=condition=ready pod -l app=backend --timeout=180s
+kubectl -n todoapp wait --for=condition=ready pod -l app=frontend --timeout=180s
+
+
+// view pods
+kubectl -n todoapp get pods
+
+// delete
+minikube image rm backend:local
+minikube image rm frontend:local 
+
+kubectl -n todoapp get pods -l app=postgres -o wide
+kubectl -n todoapp get pods -l app=backend -o wide
+
+kubectl -n todoapp get svc backend -o wide
+kubectl -n todoapp get svc frontend -o wide
+
+// binding
+
+kubectl -n todoapp port-forward svc/backend 8080:8080
+kubectl -n todoapp port-forward svc/frontend 5173:5173
+
+// config and secret
+
+kubectl apply -f k8s/configmap.yml
+kubectl apply -f k8s/secret.yml
+
+kubectl -n todoapp get configmap app-config -o yaml
+kubectl -n todoapp get secret app-secret -o yaml
+
+
+                                        |
 
 ## Phase 7 — Monitoring & Logging (Prometheus + Grafana + Loki)
 

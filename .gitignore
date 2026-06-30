@@ -17,6 +17,11 @@ logs/
 *.log
 npm-debug.log*
 
+*.secret.yml
+secret.yml
+secrets.yml
+**/secret.yml
+
 # OS
 .DS_Store
 Thumbs.db
