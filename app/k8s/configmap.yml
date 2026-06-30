@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: todoapp
+data:
+  PORT: "8080"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_NAME: "todoapp"
+  CLIENT_URL: "http://localhost:5173"

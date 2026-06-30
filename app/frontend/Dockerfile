@@ -21,11 +21,12 @@ ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 
 RUN npm run build
 
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+# FROM nginx:alpine
+# COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Initialize container will listen port 80
-EXPOSE 80
+EXPOSE 5173
 
 # Code run when container start
-CMD ["nginx", "-g", "daemon off;"]
+# CMD ["nginx", "-g", "daemon off;"]
+CMD ["npm", "run", "dev", "--", "--host"]
