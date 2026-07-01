@@ -423,8 +423,11 @@ kubectl apply -f k8s/secret.yml
 kubectl -n todoapp get configmap app-config -o yaml
 kubectl -n todoapp get secret app-secret -o yaml
 
+## Phase 6.5 - Ingress
 
-                                        |
+*What is Ingress ?* - Ingress receives requests from users and decides which Kubernetes Service should handle them
+
+
 
 ## Phase 7 — Monitoring & Logging (Prometheus + Grafana + Loki)
 
