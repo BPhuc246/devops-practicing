@@ -1,166 +1,209 @@
-# ROADMAP PRACTICING DEVOPS
+# DevOps Practice Roadmap — Fullstack Todo App
 
-## Phase 1 — Build app cơ bản
+A step-by-step roadmap for building, containerizing, testing, and deploying a fullstack Todo application — from local development to a live Azure VM.
 
-- Goal:
-  - Xây dựng hoàn chỉnh một ứng dụng Todo fullstack có thể chạy được trên máy local
-  - Hiểu luồng dữ liệu từ Database → Backend API → Frontend và ngược lại
-  - Làm quen với cấu trúc project thực tế, tổ chức code rõ ràng, tách biệt từng layer
-  -
+---
 
-- Frontend: React + Tailwind
+## Table of Contents
 
-- Backend: Nodejs + Express + Postgresql
+- [Phase 1 — Basic App Build](#phase-1--basic-app-build)
+- [Phase 2 — Dockerize the App](#phase-2--dockerize-the-app)
+- [Phase 3 — Docker Compose](#phase-3--docker-compose)
+- [Phase 3.5 — Secrets Management](#phase-35--secrets-management)
+- [Phase 4 — CI/CD with GitHub Actions](#phase-4--cicd-with-github-actions)
+- [Phase 5 — Deploy to Azure VM + Docker + Nginx](#phase-5--deploy-to-azure-vm--docker--nginx)
+
+---
+
+## Phase 1 — Basic App Build
+
+**Goals:**
+- Build a complete fullstack Todo application that runs locally
+- Understand the data flow: **Database → Backend API → Frontend** and back
+- Get comfortable with real-world project structure, with clearly separated layers
+
+**Stack:**
+- **Frontend:** React + Tailwind
+- **Backend:** Node.js + Express + PostgreSQL
+
+**Project structure:**
 
 ```
 todo-app/
 ├── backend/
 │   ├── src/
-│   │   ├── index.js          # Khởi động Express server
-│   │   ├── db.js             # Kết nối PostgreSQL, tạo bảng
+│   │   ├── index.js          # Starts the Express server
+│   │   ├── db.js             # PostgreSQL connection, table creation
 │   │   └── routes/
-│   │       └── todos.js      # Toàn bộ API endpoints
-│   ├── .env                  # Biến môi trường (không commit)
-│   ├── .env.example          # Template cho team (có commit)
+│   │       └── todos.js      # All API endpoints
+│   ├── .env                  # Environment variables (not committed)
+│   ├── .env.example          # Template for the team (committed)
 │   └── package.json
 └── frontend/
     ├── src/
-    │   ├── App.jsx            # Component chính, quản lý state
-    │   ├── api.js             # Gọi API với axios
+    │   ├── App.jsx            # Main component, manages state
+    │   ├── api.js             # API calls via axios
     │   └── components/
-    │       ├── TodoItem.jsx   # Hiển thị + sửa + xoá từng todo
-    │       └── AddTodo.jsx    # Form thêm todo mới
-    ├── vite.config.js         # Proxy /api → localhost:8080
+    │       ├── TodoItem.jsx   # Display + edit + delete a todo
+    │       └── AddTodo.jsx    # Form to add a new todo
+    ├── vite.config.js         # Proxies /api → localhost:8080
     └── package.json
 ```
 
-## Phase 2 — Dockerize app
+---
 
-- Create `.dockerignore` for frontend and backend and set up for it: avoid copy node_module, env, git ( too long )
+## Phase 2 — Dockerize the App
 
-- Paste these cmd line in each frontend path and backend path:
+Create a `.dockerignore` file for both frontend and backend to avoid copying `node_modules`, `.env`, `.git`, etc. into the image (keeps builds fast and images small).
 
-  **Build image from Dockerfile:**
-  `docker build -t <name-container> .`
-  - `build` — read Dockerfile and create image
-  - `-t <name-container>` — name for image (ví dụ: `todo-backend`)
-  - `.` — build context is the current folder (where store Dockerfile)
+### Build & Run
 
-  **Run container from image built:**
-  `docker run -p <PORT:PORT> --name <name> --env-file .env <name-container>`
-  - `run` — create and start container from image
-  - `-p 8080:8080` — map port to main: port trong container
-  - `--name <name>` — name for container (e.g: `todo-backend-container`)
-  - `--env-file .env` — pass environment variables file `.env` into container
-  - `<name-container>` — image name used to create container
+Run these commands from each service's folder (`frontend/` and `backend/`):
 
-  ### Build in frontend has file .env: `docker build --build-arg VITE_BACKEND_URL=<URL> -t <name-container> .`
-  - `--build-arg`: read var vite_backend_url from .env
+**Build an image from the Dockerfile:**
+```bash
+docker build -t <name-container> .
+```
+- `build` — reads the Dockerfile and creates an image
+- `-t <name-container>` — names the image (e.g. `todo-backend`)
+- `.` — build context is the current folder (where the Dockerfile lives)
+
+**Run a container from the built image:**
+```bash
+docker run -p <PORT:PORT> --name <name> --env-file .env <name-container>
+```
+- `run` — creates and starts a container from an image
+- `-p 8080:8080` — maps host port → container port
+- `--name <name>` — names the container (e.g. `todo-backend-container`)
+- `--env-file .env` — passes environment variables from `.env` into the container
+- `<name-container>` — the image used to create the container
+
+**Frontend build with `.env` variables:**
+```bash
+docker build --build-arg VITE_BACKEND_URL=<URL> -t <name-container> .
+```
+- `--build-arg` — reads `VITE_BACKEND_URL` and injects it at build time
+
+### Useful Commands
 
 ```bash
-  docker ps                        # Watch containers running
-  docker logs <name container>   # Watch log ogg container
-  docker stop <name container>   # Stop container
-  docker rm <name container>     # Delete container
+docker ps                        # List running containers
+docker logs <container-name>     # View container logs
+docker stop <container-name>     # Stop a container
+docker rm <container-name>       # Remove a container
 ```
 
+### Example (frontend)
+
+```bash
 docker build -t pern-frontend .
 docker run -p 5173:5173 --name frontend --env-file .env pern-frontend
+```
+
+---
 
 ## Phase 3 — Docker Compose
 
-- Goal: Start several services at the same time
+**Goal:** Start multiple services (frontend, backend, database) together with a single command.
 
-- Create file ``docker-compose.yml` in folder contained frontend and backend folder.
+Create a `docker-compose.yml` file in the root folder that contains both `frontend/` and `backend/`.
 
-- `docker compose up --build` đọc `compose.yml`
+> 💡 Search `docker compose` in the official docs for full configuration details.
 
-Find by key word `docker compose` to have more details
+### Commands
 
 ```bash
-  docker compose up --build      # Build image and start all
-  docker compose up -d --build   # Detached
-  docker compose down            # Stop and delete containers
-  docker compose down -v         # Stop and delete volume (lost data)
-  docker compose logs backend    # Watch log of service backend
-  docker compose ps              # Watch status of service
+docker compose up --build      # Build images and start all services
+docker compose up -d --build   # Same, but detached (background)
+docker compose down            # Stop and remove containers
+docker compose down -v         # Stop and remove containers + volumes (data loss!)
+docker compose logs backend    # View logs for the backend service
+docker compose ps              # View status of all services
 ```
+
+---
 
 ## Phase 3.5 — Secrets Management
 
-`Rule 1`: Ensure .env in file .gitignore
-`Rule 2`: No fallback password in source code
-`Rule 3`: Backend validated environment variable
-`Rule 4`: Check git history: `git log --all --full-history -- **/.env`
+| Rule | Description |
+|------|-------------|
+| **Rule 1** | Make sure `.env` is listed in `.gitignore` |
+| **Rule 2** | Never hardcode fallback passwords in source code |
+| **Rule 3** | Backend should validate required environment variables at startup |
+| **Rule 4** | Check git history for leaked secrets: `git log --all --full-history -- **/.env` |
 
-## Phase 4 — CI/CD với GitHub Actions
+---
 
-CI (Continuous Integration): Automatically checks code quality and runs tests whenever code is pushed or a pull request is created
-CD (Continuous Deployment / Delivery): Automatically deploys the application after the CI process passes successfully.
+## Phase 4 — CI/CD with GitHub Actions
 
-- Create file `.github/workflows/ci.yml` in folder cotain frontend and backend:
-  - Install dependencies
-  - Run ESLint
-  - Check code formatting
-  - Validate build/test process
+- **CI (Continuous Integration):** Automatically checks code quality and runs tests whenever code is pushed or a pull request is opened.
+- **CD (Continuous Deployment / Delivery):** Automatically deploys the application once CI passes successfully.
 
-- Configure `eslint.config.js` and `.prettierrc` in backend and frontend folder: to check format code:
-  - Maintain consistent code style
-  - Detect common coding issues
-  - Prevent unused variables and formatting mistakes
+### Setup
 
-- Setting `script` in `package.json` from both frontend and backend --> Run the following command to check for linting errors `npm run lint`
+1. Create `.github/workflows/ci.yml` in the root folder (covering both `frontend/` and `backend/`) to:
+   - Install dependencies
+   - Run ESLint
+   - Check code formatting
+   - Validate the build/test process
+
+2. Configure `eslint.config.js` and `.prettierrc` in both the `frontend/` and `backend/` folders to:
+   - Maintain a consistent code style
+   - Detect common coding issues
+   - Prevent unused variables and formatting mistakes
+
+3. Add a lint script to `package.json` in both folders:
+
+```json
+"scripts": {
+  "lint": "eslint ."
+}
+```
+
+Run it locally with:
+
+```bash
+npm run lint
+```
+
+---
 
 ## Phase 5 — Deploy to Azure VM + Docker + Nginx
 
-- Goal: Deploy your Dockerized full-stack Todo application to an Ubuntu Virtual Machine on Azure and access it from any browser using the VM's public IP.
+**Goal:** Deploy the Dockerized fullstack Todo app to an Ubuntu VM on Azure, accessible from any browser via the VM's public IP.
 
-> **Note**
->
-> This guide is intended for learning purposes only.
+> **Note:** This guide is intended for learning purposes only.
 
 ### 1. Create an Azure Virtual Machine
 
-_Why do we need a Virtual Machine?_
-A **Virtual Machine (VM)** is simply another computer running in Microsoft's cloud.
-Instead of hosting your application on your own laptop (which must stay online 24/7), you host it on a VM so anyone on the Internet can access it anytime.
+A **Virtual Machine (VM)** is simply another computer running in Microsoft's cloud. Instead of hosting the app on your own laptop (which must stay online 24/7), you host it on a VM so anyone on the Internet can reach it anytime.
 
-#### Step 1 — Create a Virtual Machine
+Go to: **Azure Portal → Virtual Machines → Create**
 
-Go to:
+#### Basic
 
-> **Azure Portal → Virtual Machines → Create**
+| Setting | Value |
+|---|---|
+| Subscription | Your Azure subscription |
+| Resource Group | Create a new one |
+| Virtual Machine Name | Any name |
+| Region | Closest region (reduces latency) |
+| Availability Options | `No infrastructure redundancy required` |
+| Image | Latest Ubuntu Server LTS |
+| Security Type | Default |
+| Authentication Type | Password |
 
-### Basic
-
-- **Subscription:** Your Azure subscription
-- **Resource Group:** Create a new one
-- **Virtual Machine Name:** Choose any name
-- **Region:** Choose the closest region to reduce latency
-- **Availability Options:** `No infrastructure redundancy required`
-- **Image:** Latest Ubuntu Server LTS
-- **Security Type:** Default
-- **Authentication Type:** Password
-
-Create:
-
-- Username
-- Password (minimum 12 characters)
--
+Set a username and a password (minimum 12 characters).
 
 #### Inbound Port Rules
 
 For learning purposes, allow:
-
-- **SSH (22)** — Connect to the server
-- **HTTP (80)** — Allow browsers to access your website
+- **SSH (22)** — connect to the server
+- **HTTP (80)** — allow browsers to access your website
 
 #### Disks
 
-Choose:
-
-- **Standard SSD**
-  Fast enough and cheaper than Premium SSD.
+- **Standard SSD** — fast enough and cheaper than Premium SSD
 
 #### Networking
 
@@ -168,47 +211,29 @@ Keep the default configuration.
 
 #### Management
 
-Enable:
+- Enable **Auto Shutdown** and choose a shutdown time to avoid unnecessary Azure charges.
 
-- **Auto Shutdown**
-  Choose a shutdown time to avoid unnecessary Azure charges.
+#### Monitoring / Advanced
 
-#### Monitoring
+Keep default settings — unnecessary for beginners.
 
-Keep the default settings.
-Monitoring services are unnecessary for beginners.
+#### Tags (optional)
 
-#### Advanced
-
-Keep default settings.
-
-#### Tags (Optional)
-
-Example:
 | Name | Value |
-|------|------|
+|------|-------|
 | owner | your-name |
-
----
 
 Click **Review + Create** and wait for deployment to finish.
 
-## 2. Connect to the Virtual Machine
+---
 
-> **Important**
->
-> Stop the VM when you're not using it to save Azure credits.
+### 2. Connect to the Virtual Machine
 
-### Step 1
+> **Important:** Stop the VM when you're not using it to save Azure credits.
 
-Start the VM.
-Go to:
+**Step 1 — Start the VM**, then go to **Virtual Machine → Connect**.
 
-> **Virtual Machine → Connect**
-
-### Step 2
-
-Connect using SSH.
+**Step 2 — Connect via SSH:**
 
 ```bash
 ssh <username>@<PUBLIC_IP>
@@ -220,70 +245,45 @@ Example:
 ssh ubuntu@20.10.30.40
 ```
 
-## Step 3
+**Step 3 — Open HTTP traffic:**
 
-Open HTTP traffic.
-Go to:
+Go to **Networking → Add inbound port rule** and allow:
 
-> **Networking → Add inbound port rule**
-> Allow:
-> | Port | Purpose |
-> |------|---------|
-> | 80 | Website (HTTP) |
-> Click **Add**.
+| Port | Purpose |
+|------|---------|
+| 80 | Website (HTTP) |
 
-## 3. Deploy Your Application
+Click **Add**.
 
-> **Prerequisite**
->
-> Install WSL if you're using Windows:
->
-> https://learn.microsoft.com/windows/wsl/install
-> Using WSL helps you become familiar with Linux.
+---
 
-### Step 1 — Push your code to GitHub
+### 3. Deploy Your Application
+
+> **Prerequisite (Windows users):** Install WSL to become familiar with a Linux environment: https://learn.microsoft.com/windows/wsl/install
+
+#### Step 1 — Push your code to GitHub
 
 Commit and push your latest project.
 
-### Step 2 — Install Docker
-
-Update packages:
+#### Step 2 — Install Docker on the VM
 
 ```bash
 sudo apt update
 sudo apt upgrade -y
-```
-
-Install Docker:
-
-```bash
 sudo apt install docker.io -y
-```
-
-Add your user to the Docker group:
-
-```bash
 sudo usermod -aG docker $USER
 ```
 
-Log out and log back in for the changes to take effect.
+Log out and log back in for the group change to take effect.
 
-### Step 3 — Clone your repository
+#### Step 3 — Clone your repository
 
 ```bash
 git clone https://github.com/<your-username>/<your-project>.git
-```
-
-Go to the project folder:
-
-```bash
 cd <your-project>
 ```
 
-### Step 4 — Configure the Frontend
-
-Navigate to the frontend directory.
-Edit the `.env` file:
+#### Step 4 — Configure the Frontend
 
 ```bash
 nano .env
@@ -295,9 +295,9 @@ Update:
 VITE_BACKEND_URL=http://<VM_PUBLIC_IP>:<BACKEND_PORT>
 ```
 
-### Step 5 — Update the Frontend Dockerfile
+#### Step 5 — Update the Frontend Dockerfile for Production
 
-Replace your development Dockerfile with a production build.
+Replace the development Dockerfile with a production, Nginx-served build:
 
 ```dockerfile
 FROM node:20-alpine AS builder
@@ -320,10 +320,7 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-### Step 6 — Configure the Backend
-
-Navigate to the backend folder.
-Edit the `.env` file:
+#### Step 6 — Configure the Backend
 
 ```bash
 nano .env
@@ -335,99 +332,305 @@ Update:
 CLIENT_URL=http://<VM_PUBLIC_IP>
 ```
 
-### Step 7 — Start the Containers
+#### Step 7 — Start the Containers
 
-Navigate to the folder containing `docker-compose.yml`.
-Run:
+From the folder containing `docker-compose.yml`:
 
 ```bash
 docker compose up --build -d
 ```
 
-# 🎉 Done!
+---
+
+### 🎉 Done!
 
 Open your browser and visit:
 
-```text
+```
 http://<VM_PUBLIC_IP>
 ```
 
-Your Todo application should now be accessible from anywhere on the Internet.
+Your Todo application is now live and accessible from anywhere on the Internet.
 
-## Phase 6 — Kubernetes (local with minikube first)
-
+# Kubernetes, Nginx & Ingress — Local Development Guide (minikube)
+ 
+This document covers running a full-stack app (frontend + backend + PostgreSQL) on a local Kubernetes cluster with **minikube**, including ConfigMaps, Secrets, and exposing the app through an **Nginx Ingress Controller**.
+ 
+---
+ 
+## Table of Contents
+ 
+- [Phase 6 — Kubernetes Basics](#phase-6--kubernetes-basics)
+  - [Kubernetes Resource Kinds](#kubernetes-resource-kinds)
+  - [Cluster Setup](#cluster-setup)
+  - [Building & Loading Images](#building--loading-images)
+  - [Deploying Resources](#deploying-resources)
+  - [Inspecting the Cluster](#inspecting-the-cluster)
+  - [Port Forwarding](#port-forwarding)
+  - [ConfigMaps & Secrets](#configmaps--secrets)
+- [Phase 6.5 — Ingress](#phase-65--ingress)
+  - [What is Ingress?](#what-is-ingress)
+  - [Enabling the Ingress Addon](#enabling-the-ingress-addon)
+  - [Building for Ingress](#building-for-ingress)
+  - [Applying the Ingress Resource](#applying-the-ingress-resource)
+  - [Accessing the App](#accessing-the-app)
+  - [Windows Note: Freeing Port 80](#windows-note-freeing-port-80)
+---
+ 
+## Phase 6 — Kubernetes Basics
+ 
 ### Kubernetes Resource Kinds
-
-Kubernetes manages applications using different resource kinds. Each kind serves a specific purpose within the cluster.
-
-| Kind                            | Purpose                                                                                                            |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **Pod**                         | Runs one or more containers. The smallest deployable unit in Kubernetes.                                           |
-| **Deployment**                  | Manages Pods, handles rolling updates, and ensures the desired number of replicas are running.                     |
-| **ReplicaSet**                  | Maintains a stable set of identical Pods. Usually managed automatically by a Deployment.                           |
-| **Service**                     | Provides a stable network endpoint for accessing one or more Pods.                                                 |
-| **ConfigMap**                   | Stores non-sensitive configuration data such as environment variables or configuration files.                      |
-| **Secret**                      | Stores sensitive information such as passwords, API keys, and tokens.                                              |
-| **Namespace**                   | Organizes and isolates Kubernetes resources within a cluster.                                                      |
-| **Ingress**                     | Exposes HTTP/HTTPS routes from outside the cluster to Services inside the cluster.                                 |
-| **PersistentVolume (PV)**       | Represents a piece of persistent storage available to the cluster.                                                 |
-| **PersistentVolumeClaim (PVC)** | Requests persistent storage from a PersistentVolume.                                                               |
-| **StorageClass**                | Defines how PersistentVolumes are dynamically provisioned.                                                         |
-| **NetworkPolicy**               | Controls network communication between Pods for security purposes.                                                 |
-| **StatefulSet**                 | Manages stateful applications such as PostgreSQL, MySQL, or MongoDB with stable identities and persistent storage. |
-| **DaemonSet**                   | Ensures that one Pod runs on every node (or a selected group of nodes).                                            |
-| **Job**                         | Executes a task once until it successfully completes.                                                              |
-| **CronJob**                     | Schedules Jobs to run automatically at specified times using cron syntax.  
-
-//
-minikube delete -> minikube start -drive=docker
-
+ 
+Kubernetes manages applications using different resource **kinds**. Each kind serves a specific purpose within the cluster.
+ 
+| Kind                             | Purpose                                                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Pod**                          | Runs one or more containers. The smallest deployable unit in Kubernetes.                        |
+| **Deployment**                   | Manages Pods, handles rolling updates, and ensures the desired number of replicas are running.  |
+| **ReplicaSet**                   | Maintains a stable set of identical Pods. Usually managed automatically by a Deployment.        |
+| **Service**                      | Provides a stable network endpoint for accessing one or more Pods.                              |
+| **ConfigMap**                    | Stores non-sensitive configuration data such as environment variables or config files.          |
+| **Secret**                       | Stores sensitive information such as passwords, API keys, and tokens.                           |
+| **Namespace**                    | Organizes and isolates Kubernetes resources within a cluster.                                   |
+| **Ingress**                      | Exposes HTTP/HTTPS routes from outside the cluster to Services inside the cluster.               |
+| **PersistentVolume (PV)**        | Represents a piece of persistent storage available to the cluster.                              |
+| **PersistentVolumeClaim (PVC)**  | Requests persistent storage from a PersistentVolume.                                            |
+| **StorageClass**                 | Defines how PersistentVolumes are dynamically provisioned.                                      |
+| **NetworkPolicy**                | Controls network communication between Pods for security purposes.                              |
+| **StatefulSet**                  | Manages stateful applications (e.g. PostgreSQL, MySQL, MongoDB) with stable identities/storage.  |
+| **DaemonSet**                    | Ensures that one Pod runs on every node (or a selected group of nodes).                         |
+| **Job**                          | Executes a task once until it successfully completes.                                           |
+| **CronJob**                      | Schedules Jobs to run automatically at specified times using cron syntax.                       |
+ 
+---
+ 
+### Cluster Setup
+ 
+Reset and start a fresh minikube cluster using the Docker driver:
+ 
+```bash
+minikube delete
+minikube start --driver=docker
+```
+ 
+---
+ 
+### Building & Loading Images
+ 
+Build the frontend and backend Docker images locally, then load them directly into the minikube cluster's image cache (no external registry needed):
+ 
+```bash
+# Build images
 docker build --build-arg VITE_BACKEND_URL=http://localhost:8080 -t frontend:local .
 docker build -t backend:local .
-
+ 
+# Load images into minikube
 minikube image load backend:local
 minikube image load frontend:local
-
+```
+ 
+To remove images from minikube later:
+ 
+```bash
+minikube image rm backend:local
+minikube image rm frontend:local
+```
+ 
+---
+ 
+### Deploying Resources
+ 
+Apply the manifests for each component:
+ 
+```bash
 kubectl apply -f k8s/frontend.yml
 kubectl apply -f k8s/backend.yml
 kubectl apply -f k8s/postgres.yml
-
+```
+ 
+Wait until each component's Pods are ready before moving on:
+ 
+```bash
 kubectl -n todoapp wait --for=condition=ready pod -l app=postgres --timeout=180s
 kubectl -n todoapp wait --for=condition=ready pod -l app=backend --timeout=180s
 kubectl -n todoapp wait --for=condition=ready pod -l app=frontend --timeout=180s
-
-
-// view pods
+```
+ 
+---
+ 
+### Inspecting the Cluster
+ 
+View all Pods in the `todoapp` namespace:
+ 
+```bash
 kubectl -n todoapp get pods
-
-// delete
-minikube image rm backend:local
-minikube image rm frontend:local 
-
+```
+ 
+View specific Pods with extra details (node, IP, etc.):
+ 
+```bash
 kubectl -n todoapp get pods -l app=postgres -o wide
 kubectl -n todoapp get pods -l app=backend -o wide
-
+```
+ 
+View Service details:
+ 
+```bash
 kubectl -n todoapp get svc backend -o wide
 kubectl -n todoapp get svc frontend -o wide
-
-// binding
-
+```
+ 
+---
+ 
+### Port Forwarding
+ 
+Bind local ports to the cluster Services for direct access during development:
+ 
+```bash
 kubectl -n todoapp port-forward svc/backend 8080:8080
 kubectl -n todoapp port-forward svc/frontend 5173:5173
-
-// config and secret
-
+```
+ 
+---
+ 
+### ConfigMaps & Secrets
+ 
+Apply configuration and secret manifests:
+ 
+```bash
 kubectl apply -f k8s/configmap.yml
 kubectl apply -f k8s/secret.yml
-
+```
+ 
+Inspect them:
+ 
+```bash
 kubectl -n todoapp get configmap app-config -o yaml
 kubectl -n todoapp get secret app-secret -o yaml
-
-## Phase 6.5 - Ingress
-
-*What is Ingress ?* - Ingress receives requests from users and decides which Kubernetes Service should handle them
-
-
+```
+ 
+> **ConfigMap** → non-sensitive config (URLs, feature flags, env vars)
+> **Secret** → sensitive values (passwords, tokens, API keys) — base64-encoded, not encrypted by default
+ 
+---
+ 
+## Phase 6.5 — Ingress
+ 
+### What is Ingress?
+ 
+Ingress receives HTTP/HTTPS requests from outside the cluster and decides which internal Kubernetes **Service** should handle them, based on rules like hostname and path. It sits in front of your Services and acts as a smart, single entry point — instead of exposing each Service individually.
+ 
+In this setup, **Nginx** is used as the Ingress Controller — the actual component that implements the Ingress rules and routes traffic.
+ 
+---
+ 
+### Enabling the Ingress Addon
+ 
+minikube ships with an Nginx Ingress Controller addon:
+ 
+```bash
+minikube addons enable ingress
+```
+ 
+Verify the controller Pods are running:
+ 
+```bash
+kubectl get pods -n ingress-nginx
+kubectl get all -n ingress-nginx
+```
+ 
+---
+ 
+### Building for Ingress
+ 
+Since Ingress will route `/api` requests to the backend Service, rebuild the frontend so it calls a **relative** path instead of `localhost:8080`:
+ 
+```bash
+docker build --build-arg VITE_BACKEND_URL=/api -t frontend:local .
+docker build -t backend:local .
+```
+ 
+> Don't forget to reload the updated images into minikube (`minikube image load ...`) after rebuilding.
+ 
+---
+ 
+### Applying the Ingress Resource
+ 
+```bash
+kubectl apply -f k8s/ingress.yml
+```
+ 
+Check that it was created correctly:
+ 
+```bash
+kubectl get ingress -n todoapp
+```
+ 
+---
+ 
+### Accessing the App
+ 
+Get the URL minikube exposes for the Ingress controller:
+ 
+```bash
+minikube service ingress-nginx-controller -n ingress-nginx --url
+```
+ 
+Then map the hostname used in your `ingress.yml` (e.g. `app.local`) to that address, and access the app at:
+ 
+```
+app.local:<port>
+```
+ 
+> Add an entry to your hosts file (`/etc/hosts` on Linux/macOS or `C:\Windows\System32\drivers\etc\hosts` on Windows) pointing `app.local` to `127.0.0.1` if needed.
+ 
+---
+ 
+### Windows Note: Freeing Port 80
+ 
+On Windows, the World Wide Web Publishing Service (`W3SVC`) often occupies port 80, which can conflict with Ingress. 
+Do not worry, stop this will not affect too much to your laptop or PC, you can start again any time
+Stop it with:
+ 
+```powershell
+net stop W3SVC
+```
+ 
+---
+ 
+## Quick Reference — Full Command Flow
+ 
+```bash
+# 1. Fresh cluster
+minikube delete
+minikube start --driver=docker
+ 
+# 2. Build & load images
+docker build --build-arg VITE_BACKEND_URL=/api -t frontend:local .
+docker build -t backend:local .
+minikube image load backend:local
+minikube image load frontend:local
+ 
+# 3. Deploy core resources
+kubectl apply -f k8s/configmap.yml
+kubectl apply -f k8s/secret.yml
+kubectl apply -f k8s/postgres.yml
+kubectl apply -f k8s/backend.yml
+kubectl apply -f k8s/frontend.yml
+ 
+# 4. Wait for readiness
+kubectl -n todoapp wait --for=condition=ready pod -l app=postgres --timeout=180s
+kubectl -n todoapp wait --for=condition=ready pod -l app=backend --timeout=180s
+kubectl -n todoapp wait --for=condition=ready pod -l app=frontend --timeout=180s
+ 
+# 5. Enable Ingress
+minikube addons enable ingress
+kubectl apply -f k8s/ingress.yml
+ 
+# 6. Access the app
+minikube service ingress-nginx-controller -n ingress-nginx --url
+```
+ 
 
 ## Phase 7 — Monitoring & Logging (Prometheus + Grafana + Loki)
 
