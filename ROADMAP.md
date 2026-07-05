@@ -630,8 +630,12 @@ kubectl apply -f k8s/ingress.yml
 # 6. Access the app
 minikube service ingress-nginx-controller -n ingress-nginx --url
 ```
- 
 
-## Phase 7 — Monitoring & Logging (Prometheus + Grafana + Loki)
+## Phase 7 — Infrastructure as Code (Terraform + Ansible)
 
-## Phase 8 — Infrastructure as Code (Terraform + Ansible)
+
+
+
+## Phase 8 — Monitoring & Logging (Prometheus + Grafana + Loki)
+
+
