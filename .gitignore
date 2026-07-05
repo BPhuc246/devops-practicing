@@ -33,3 +33,30 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+# Terrform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+
+# Ansible - secrets & local files
+*.retry
+inventory.ini
+.vault_pass.txt
+*.pem
+*.key
+id_rsa*
+*_rsa
+secrets.yml
+ansible.log
+.venv/
+venv/
