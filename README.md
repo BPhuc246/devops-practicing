@@ -12,6 +12,11 @@ A step-by-step roadmap for building, containerizing, testing, and deploying a fu
 - [Phase 3.5 — Secrets Management](#phase-35--secrets-management)
 - [Phase 4 — CI/CD with GitHub Actions](#phase-4--cicd-with-github-actions)
 - [Phase 5 — Deploy to Azure VM + Docker + Nginx](#phase-5--deploy-to-azure-vm--docker--nginx)
+- [Phase 6 - Kubernetes Basics](#phase-6--kubernetes-basics)
+- [Phase 6.5 - Ingress](#phase-65--ingress)
+- [Phase 7 - Infrastructure as Code](#phase-7--infrastructure-as-code-terraform--ansible)
+- [Phase 7.1 - Terraform](#71-terraform)
+- [Phase 7.1 - Ansible](#72-ansible)
 
 ---
 
@@ -630,8 +635,233 @@ kubectl apply -f k8s/ingress.yml
 # 6. Access the app
 minikube service ingress-nginx-controller -n ingress-nginx --url
 ```
+
+## Phase 7 — Infrastructure as Code (Terraform + Ansible)
+Notes on provisioning Azure infrastructure with Terraform, including setup, common errors, and the plan/apply/destroy workflow.
+
+## 7.1. Terraform
  
+### 1. Prerequisites
+ 
+#### Install Azure CLI (Windows)
+ 
+```powershell
+winget install --exact --id Microsoft.AzureCLI
+```
+ 
+Reference: [Install Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
+ 
+> After installing, **restart your terminal** so the `az` command is picked up in `PATH`. This avoids the "executable file not found" error described in the Troubleshooting section below.
+ 
+#### Sign in to Azure
+ 
+```powershell
+az login --use-device-code
+```
+ 
+You'll see output like:
+ 
+```
+To sign in, use a web browser to open the page https://microsoft.com/devicelogin
+and enter the code XXXXXXXXX to authenticate.
+```
+ 
+Open that URL, enter the code shown in your terminal, and complete sign-in in the browser.
+ 
+```
+===========
+INFORMATION
+===========
+Select a subscription and tenant (Type a number or Enter for no changes):
+```
+ 
+Press **Enter** to accept the default subscription, or type the number of the subscription/tenant you want to use.
+ 
+Reference: [Quickstart — Create a Linux VM in Azure using Terraform](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/quick-create-terraform?tabs=azure-cli)
 
-## Phase 7 — Monitoring & Logging (Prometheus + Grafana + Loki)
+#### Common adjustments before `terraform plan` and `terraform apply`
 
-## Phase 8 — Infrastructure as Code (Terraform + Ansible)
+- **Region**: change `location` to a region actually available under your subscription.
+- **VM size**: for practice/testing, a small burstable size like `Standard_B2ls_v2` keeps costs low.
+- **Authentication**: change using ssh key into password ( prefer for newbie )
+ 
+### 2. Initialize Terraform
+ 
+```bash
+terraform init -upgrade
+```
+ 
+This downloads the Azure provider (`azurerm`) needed to manage Azure resources, and generates/updates the `.terraform.lock.hcl` file, which pins provider versions for reproducible runs.
+ 
+### 3. Validate the configuration
+ 
+```bash
+terraform validate
+```
+ 
+Checks that the configuration is syntactically valid and internally consistent (before Terraform talks to Azure at all).
+ 
+### 4. Plan the deployment
+ 
+```bash
+terraform plan
+```
+ 
+`terraform plan` is a **preview** — it shows what Terraform *would* create/change/destroy without actually doing it. The more resources in the configuration, the longer this takes, since Terraform queries current state for each one.
+ 
+#### Save the plan to a file
+ 
+```bash
+terraform plan -out=tfplan
+```
+ 
+Saving the plan lets you review it now and apply the *exact same* plan later, rather than re-planning (which could pick up drift if something changed in between).
+ 
+### 5. Apply the plan
+ 
+```bash
+terraform apply tfplan
+```
+ 
+Applies the previously saved plan file directly — no re-confirmation prompt, since the plan was already reviewed.
+ 
+### 6. Get the VM's public IP
+ 
+```bash
+echo $(terraform output -raw public_ip_address)
+```
+ 
+> Note: the output name must match whatever you defined in your `output` block (e.g. `output "public_ip_address" { value = azurerm_public_ip.example.ip_address }`). Adjust the name if yours differs.
+ 
+### 7. Destroy resources
+ 
+Preview the destroy first, then apply it — same pattern as create:
+ 
+```bash
+terraform plan -destroy -out main.destroy.tfplan
+terraform apply main.destroy.tfplan
+```
+ 
+### Troubleshooting
+ 
+#### `could not parse Azure CLI version: exec: "az": executable file not found in %PATH%`
+ 
+Terraform's `azurerm` provider (when using CLI authentication) shells out to `az` to get your credentials. This error means Terraform can't find the Azure CLI on `PATH`. Fixed by [Install Azure CLI](#1-prerequisites):
+ 
+1. Confirm the CLI is installed: `az --version`
+2. If that fails, reinstall (`winget install --exact --id Microsoft.AzureCLI`) and **open a new terminal window** — PATH changes don't apply to already-open sessions.
+3. Re-run `az login --use-device-code` to confirm authentication works.
+4. Retry `terraform plan`.
+---
+
+## 7.2. Ansible
+
+Notes on using Ansible to configure servers and deploy an app after Terraform has provisioned the infrastructure.
+
+### Overview — The 4 layers of getting an app running
+
+For an app to actually run on a server, four things need to be in place:
+
+- **Packages installed** — runtimes, Docker, etc.
+- **Folders created** — app directory structure, volumes.
+- **Config present** — `.env` files, secrets, app configuration.
+- **Service running** — containers up and healthy.
+
+These map to four distinct layers of infrastructure work:
+
+| Layer | Concern | Tool |
+|---|---|---|
+| 1. Provisioning | Create the VM/network/infra itself | Terraform |
+| 2. Configuration management | Install packages, create folders, write config | Ansible |
+| 3. Deployment | Get the app's code/containers onto the server and running | Ansible (playbooks) |
+| 4. Exposure | Make the app reachable — reverse proxy, HTTPS, domains | Caddy / Nginx |
+
+### 1. Install Ansible (via WSL)
+
+Ansible runs on Linux, so on Windows you install it inside WSL:
+
+```bash
+wsl
+sudo apt update
+sudo apt install -y ansible
+```
+
+### 2. Initialize the project
+
+Create `ansible.cfg` and `inventory.ini` in your project folder — these define Ansible's settings and the list of hosts (servers) it manages.
+
+Then, from `cmd`, enter WSL and navigate to the project folder:
+
+```bash
+wsl
+cd /path/to/your/project
+```
+
+### 3. Point Ansible at your config file
+
+```bash
+export ANSIBLE_CONFIG=$PWD/ansible.cfg
+```
+
+This tells Ansible to use the `ansible.cfg` in your current folder instead of a global default.
+
+**Verify:**
+
+```bash
+ansible --version | sed -n '1,6p'
+```
+
+**Test connectivity to your hosts** (defined in `inventory.ini` under a group, e.g. `prod`):
+
+```bash
+ansible prod -m ping
+```
+
+### 4. Connect to the VM
+
+```bash
+ssh <username>@<vm_ip_address>
+```
+
+### 5. Run playbooks
+
+An **Ansible playbook** is a YAML script that automates server setup — installing packages, creating folders, writing config, starting services.
+
+**Run a bootstrap playbook** (initial server setup — layer 2):
+
+```bash
+ansible-playbook bootstrap.yml
+```
+
+**Run a deploy playbook** (app deployment — layer 3), explicitly pointing at your inventory:
+
+```bash
+ansible-playbook -i inventory.ini deploy.yml
+```
+
+### 6. Access the app (layer 4 — exposure)
+
+**With a reverse proxy (Nginx/Caddy) in front:**
+
+```
+http://<vm_ip_address>
+```
+
+The proxy listens on port 80/443 and forwards to the app internally — no port number needed in the URL.
+
+**Without a reverse proxy** (hitting the app/container port directly):
+
+```
+http://<vm_ip_address>:<frontend_port>
+```
+
+---
+
+## Next up
+
+- [ ] `bootstrap.yml` — package install, folder structure, `.env` setup
+- [ ] `deploy.yml` — pull/build containers, start services
+- [ ] Reverse proxy config (Caddy) — HTTPS via automatic Let's Encrypt certs
+
+
+## Phase 8 — Monitoring & Logging (Prometheus + Grafana + Loki)
