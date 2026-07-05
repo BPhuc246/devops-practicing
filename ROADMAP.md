@@ -16,7 +16,7 @@ A step-by-step roadmap for building, containerizing, testing, and deploying a fu
 - [Phase 6.5 - Ingress](#phase-65--ingress)
 - [Phase 7 - Infrastructure as Code](#phase-7--infrastructure-as-code-terraform--ansible)
 - [Phase 7.1 - Terraform](#71-terraform)
-- [Phase 7.1 - Ansible](#72-ansible)
+- [Phase 7.2 - Ansible](#72-ansible)
 
 ---
 
