@@ -855,13 +855,74 @@ The proxy listens on port 80/443 and forwards to the app internally — no port 
 http://<vm_ip_address>:<frontend_port>
 ```
 
+### 7. Security Management (Ansible Vault)
+
+Secrets (DB passwords, API keys, etc.) shouldn't sit in plaintext in your repo. `.gitignore` keeps files out of Git entirely, but for values that *do* need to live in your playbooks (referenced by name), Ansible Vault encrypts them at rest instead.
+
+> Check `.gitignore` first — make sure `vault.yml` files and raw `.env` files aren't accidentally excluded from encryption/tracking in a way that leaves secrets exposed elsewhere.
+
+#### Step 1 — Set your editor (optional)
+
+Ansible Vault opens the encrypted file in `vim` by default. If you're not comfortable with `vim`, switch to `nano`:
+
+```bash
+export EDITOR=nano
+```
+
+Skip this step if you're fine with `vim`.
+
+#### Step 2 — Reference secrets by name in your playbook/config
+
+In `deploy.yml` (or wherever `backend/.env` content is templated), reference the secret by variable name instead of hardcoding it:
+
+```yaml
+DB_PASSWORD={{ vault_db_password }}
+```
+
+Ansible will substitute the real value at runtime, pulled from the encrypted vault file.
+
+#### Step 3 — Create the vault file
+
+```bash
+ansible-vault create group_vars/prod/vault.yml
+```
+
+- Creates `group_vars/prod/vault.yml`, encrypted, and applied automatically to hosts in the `prod` group.
+- You'll be prompted to set a password — this password is the encryption key. Anyone who wants to view or edit this file later needs it.
+
+#### Step 4 — Add your secrets
+
+This opens the file in your editor (`nano`, if you set `EDITOR` above). Add your secrets as normal YAML key/value pairs:
+
+```yaml
+vault_db_password: MySecretKey
+```
+
+Save and exit:
+
+- **nano**: `Ctrl + O` (write out / save) → `Enter` to confirm filename → `Ctrl + X` (exit)
+- **vim**: `Esc` → `:wq` → `Enter`
+
+#### Step 5 — Run the playbook with the vault password
+
+Since `deploy.yml` now depends on encrypted variables, you must supply the vault password at runtime:
+
+```bash
+ansible-playbook -i inventory.ini deploy.yml --ask-vault-pass
+```
+
+Ansible will prompt for the vault password, decrypt `vault.yml` in memory, substitute `{{ vault_db_password }}`, and proceed with deployment.
+
 ---
 
-## Next up
+**Other useful vault commands:**
 
-- [ ] `bootstrap.yml` — package install, folder structure, `.env` setup
-- [ ] `deploy.yml` — pull/build containers, start services
-- [ ] Reverse proxy config (Caddy) — HTTPS via automatic Let's Encrypt certs
+| Command | Purpose |
+|---|---|
+| `ansible-vault edit group_vars/prod/vault.yml` | Edit an existing encrypted file |
+| `ansible-vault view group_vars/prod/vault.yml` | View contents without editing |
+| `ansible-vault rekey group_vars/prod/vault.yml` | Change the vault password |
+| `ansible-vault decrypt group_vars/prod/vault.yml` | Permanently decrypt (use with care) |
 
 
 ## Phase 8 — Monitoring & Logging (Prometheus + Grafana + Loki)
