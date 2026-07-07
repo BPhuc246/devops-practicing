@@ -77,9 +77,19 @@
         dest: "{{ app_dir }}/nginx/nginx.conf"
         mode: "0644"
     
+    - name: Ensure certbot directories exist
+      file:
+        path: "{{ app_dir }}/certbot/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - www
+        - conf
+    
     - name: Build and start containers
       shell: |
         docker compose -f docker-compose.yml up -d --build
+        docker compose -f docker-compose.yml restart nginx
       args:
         chdir: "{{ app_dir }}"
     

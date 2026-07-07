@@ -1,0 +1,46 @@
+- name: Deploy Observability stack Prometheus and Grafana
+  hosts: prod
+  become: true
+
+  vars:
+    obs_dir: /opt/statusboard/observability
+
+  tasks:
+    - name: Ensure observability directory exists
+      file:
+        path: "{{ obs_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy observability compose.yml to VPS
+      copy:
+        src: ../observability/compose.yml
+        dest: "{{ obs_dir }}/compose.yml"
+        mode: "0644"
+
+    - name: Copy Prometheus config (prometheus.yml) to VPS
+      copy:
+        src: ../observability/prometheus.yml
+        dest: "{{ obs_dir }}/prometheus.yml"
+        mode: "0644"
+
+    - name: Copy Blackbox config (blackbox.yml) to VPS
+      copy:
+        src: ../observability/blackbox.yml
+        dest: "{{ obs_dir }}/blackbox.yml"
+        mode: "0644"
+
+    - name: Start observability containers
+      shell: |
+        docker compose -f compose.yml up -d
+      args:
+        chdir: "{{ obs_dir }}"
+
+    - name: Show running containers
+      shell: docker ps
+      register: docker_ps_output
+      changed_when: false
+
+    - name: Print docker ps output
+      debug:
+        msg: "{{ docker_ps_output.stdout_lines }}"

@@ -655,6 +655,10 @@ This runs every day at 3 AM, silently renews the cert if it's within 30 days of 
 ---
 
 ### Summary Checklist
+<<<<<<< HEAD
+=======
+
+>>>>>>> f8321666cc5266c770bdce8f76e946e6d6bac18a
 - [ ] Subdomain registered on DuckDNS and pointing to VM IP
 - [ ] Ports 80 and 443 open in cloud NSG/firewall
 - [ ] `docker-compose.yml` updated with `certbot` service and shared volumes

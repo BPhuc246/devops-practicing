@@ -1,0 +1,70 @@
+# scrape_interval: how frequently to scrape targets ( default is 1 minute )
+# scrap_timeout: how long until a scrape request times out ( default is 10 seconds )
+# evaluation_interval: how frequently to evaluate rules ( default is 1 minutes )
+
+global:
+  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds.
+
+  # Attach these extra labels to all timeseries collected by this Prometheus instance.
+  external_labels:
+    monitor: 'codelab-monitor'
+
+# rule_files:
+#   - 'prometheus.rules.yml'
+
+# # Alertmanager configuration for handling notifications
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [] 
+
+scrape_configs:
+  # give you metrics about Prometheus's own health — how many samples it's ingesting, memory usage, scrape durations
+  - job_name: "prometheus"
+    scrape_interval: 30s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  # CPU usage, memory, disk space, disk I/O, network traffic, filesystem, load average, uptime.
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["node_exporter:9100"]
+
+  # CPU/memory/network usage per Docker container running on the VM. This tells you "which container is eating all the CPU" rather than just "the VM is at 90% CPU."
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: "blackbox_http"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://advanceddevopscourse.duckdns.org/
+          - https://advanceddevopscourse.duckdns.org/api/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+#   - name: instance-alerts
+#     rules:
+#     - alert: InstanceDown
+#       expr: up == 0
+#       for: 2m
+#       labels:
+#         severity: critical
+#       annotations:
+#         summary: "{{ $labels.instance }} is down"
+
+# prometheus:
+#     volumes:
+#       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#       - ./prometheus_rules.yml:/etc/prometheus/prometheus.rules.yml:ro
+#       - prometheus_data:/prometheus
