@@ -1,0 +1,93 @@
+- name: Deploy Statusboard app
+  hosts: prod
+  become: true
+
+  vars:
+    app_dir: /opt/s
+
+  vars_files:
+    - group_vars/prod/vault.yml
+    
+  tasks:
+    - name: Ensure app directory exists
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+    
+    - name: Copy compose.yml to VPS
+      copy:
+        src: ../../app/docker-compose.yml
+        dest: "{{ app_dir }}/docker-compose.yml"
+        mode: "0644"
+    
+    - name: Sync backend folder to VPS
+      synchronize:
+        src: ../../app/backend/
+        dest: "{{ app_dir }}/backend/"
+        recursive: true
+        delete: true
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.git"
+          - "--exclude=dist"
+          - "--exclude=.env"
+
+    - name: Sync frontend folder to VPS
+      synchronize:
+        src: ../../app/frontend/
+        dest: "{{ app_dir }}/frontend/"
+        recursive: true
+        delete: true
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.git"
+          - "--exclude=dist"
+          - "--exclude=.env"
+
+    - name: Write backend env file
+      copy:
+        dest: "{{ app_dir }}/backend/.env"
+        owner: phucadmin
+        group: phucadmin
+        mode: "0600"
+        content: |
+          PORT={{ port }}
+          DB_HOST={{ vault_host }}
+          DB_PORT={{ vault_port }}
+          DB_NAME={{ vault_db_name }}
+          DB_USER={{ vault_db_user }}
+          DB_PASSWORD={{ vault_db_password }}
+          POSTGRES_URI={{ vault_postgres_uri }}
+          CLIENT_URL={{ vault_client_url }}
+          SLOW_MS={{ vault_slow_ms }}
+          POSTGRES_USER={{ vault_postgres_user }}
+          POSTGRES_PASSWORD={{ vault_postgres_password }}
+          POSTGRES_DB={{ vault_postgres_db }}
+
+    - name: Ensure nginx config directory exists
+      file:
+        path: "{{ app_dir }}/nginx"
+        state: directory
+        mode: "0755"
+
+    - name: Copy nginx config to VPS
+      copy:
+        src: ../../app/nginx/nginx.conf
+        dest: "{{ app_dir }}/nginx/nginx.conf"
+        mode: "0644"
+    
+    - name: Build and start containers
+      shell: |
+        docker compose -f docker-compose.yml up -d --build
+      args:
+        chdir: "{{ app_dir }}"
+    
+    - name: Show running containers
+      shell: docker ps
+      register: docker_ps_output
+      changed_when: false
+    
+    - name: Print docker ps docker_ps_output
+      debug:
+        msg: "{{ docker_ps_output.stdout_lines }}"
