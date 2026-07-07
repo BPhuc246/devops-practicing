@@ -1,18 +1,11 @@
-# ROADMAP PRACTICING DEVOPS
+# DevOps Practice Roadmap — Fullstack Todo App
 
-## Phase 1 — Build app cơ bản
+A step-by-step roadmap for building, containerizing, testing, and deploying a fullstack Todo application — from local development to a live Azure VM.
 
-- Goal:
-  - Xây dựng hoàn chỉnh một ứng dụng Todo fullstack có thể chạy được trên máy local
-  - Hiểu luồng dữ liệu từ Database → Backend API → Frontend và ngược lại
-  - Làm quen với cấu trúc project thực tế, tổ chức code rõ ràng, tách biệt từng layer
-  -
+---
 
-- Frontend: React + Tailwind
+## Table of Contents
 
-<<<<<<< Updated upstream
-- Backend: Nodejs + Express + Postgresql
-=======
 - [Phase 1 — Basic App Build](#phase-1--basic-app-build)
 - [Phase 2 — Dockerize the App](#phase-2--dockerize-the-app)
 - [Phase 3 — Docker Compose](#phase-3--docker-compose)
@@ -39,263 +32,278 @@
 - **Backend:** Node.js + Express + PostgreSQL
 
 **Project structure:**
->>>>>>> Stashed changes
 
 ```
 todo-app/
 ├── backend/
 │   ├── src/
-│   │   ├── index.js          # Khởi động Express server
-│   │   ├── db.js             # Kết nối PostgreSQL, tạo bảng
+│   │   ├── index.js          # Starts the Express server
+│   │   ├── db.js             # PostgreSQL connection, table creation
 │   │   └── routes/
-│   │       └── todos.js      # Toàn bộ API endpoints
-│   ├── .env                  # Biến môi trường (không commit)
-│   ├── .env.example          # Template cho team (có commit)
+│   │       └── todos.js      # All API endpoints
+│   ├── .env                  # Environment variables (not committed)
+│   ├── .env.example          # Template for the team (committed)
 │   └── package.json
 └── frontend/
     ├── src/
-    │   ├── App.jsx            # Component chính, quản lý state
-    │   ├── api.js             # Gọi API với axios
+    │   ├── App.jsx            # Main component, manages state
+    │   ├── api.js             # API calls via axios
     │   └── components/
-    │       ├── TodoItem.jsx   # Hiển thị + sửa + xoá từng todo
-    │       └── AddTodo.jsx    # Form thêm todo mới
-    ├── vite.config.js         # Proxy /api → localhost:3001
+    │       ├── TodoItem.jsx   # Display + edit + delete a todo
+    │       └── AddTodo.jsx    # Form to add a new todo
+    ├── vite.config.js         # Proxies /api → localhost:8080
     └── package.json
 ```
 
-## Phase 2 — Dockerize app
+---
 
-- Create `.dockerignore` for frontend and backend and set up for it: avoid copy node_module, env, git ( too long )
+## Phase 2 — Dockerize the App
 
-- Paste these cmd line in each frontend path and backend path:
+Create a `.dockerignore` file for both frontend and backend to avoid copying `node_modules`, `.env`, `.git`, etc. into the image (keeps builds fast and images small).
 
-  **Build image from Dockerfile:**
-  `docker build -t <name-container> .`
-  - `build` — read Dockerfile and create image
-  - `-t <name-container>` — name for image (ví dụ: `todo-backend`)
-  - `.` — build context is the current folder (where store Dockerfile)
+### Build & Run
 
-  **Run container from image built:**
-  `docker run -p <PORT:PORT> --name <name> --env-file .env <name-container>`
-  - `run` — create and start container from image
-  - `-p 3001:3001` — map port to main: port trong container
-  - `--name <name>` — name for container (e.g: `todo-backend-container`)
-  - `--env-file .env` — pass environment variables file `.env` into container
-  - `<name-container>` — image name used to create container
+Run these commands from each service's folder (`frontend/` and `backend/`):
 
-  ### Build in frontend has file .env: `docker build --build-arg VITE_BACKEND_URL=<URL> -t <name-container> .`
-  - `--build-arg`: read var vite_backend_url from .env
+**Build an image from the Dockerfile:**
+```bash
+docker build -t <name-container> .
+```
+- `build` — reads the Dockerfile and creates an image
+- `-t <name-container>` — names the image (e.g. `todo-backend`)
+- `.` — build context is the current folder (where the Dockerfile lives)
+
+**Run a container from the built image:**
+```bash
+docker run -p <PORT:PORT> --name <name> --env-file .env <name-container>
+```
+- `run` — creates and starts a container from an image
+- `-p 8080:8080` — maps host port → container port
+- `--name <name>` — names the container (e.g. `todo-backend-container`)
+- `--env-file .env` — passes environment variables from `.env` into the container
+- `<name-container>` — the image used to create the container
+
+**Frontend build with `.env` variables:**
+```bash
+docker build --build-arg VITE_BACKEND_URL=<URL> -t <name-container> .
+```
+- `--build-arg` — reads `VITE_BACKEND_URL` and injects it at build time
+
+### Useful Commands
 
 ```bash
-  docker ps                        # Watch containers running
-  docker logs <name container>   # Watch log ogg container
-  docker stop <name container>   # Stop container
-  docker rm <name container>     # Delete container
+docker ps                        # List running containers
+docker logs <container-name>     # View container logs
+docker stop <container-name>     # Stop a container
+docker rm <container-name>       # Remove a container
 ```
 
+### Example (frontend)
+
+```bash
 docker build -t pern-frontend .
 docker run -p 5173:5173 --name frontend --env-file .env pern-frontend
-
-## Phase 3 — Docker Compose
-
-- Goal: Start several services at the same time
-
-- Create file ``docker-compose.yml` in folder contained frontend and backend folder.
-
-- `docker compose up --build` đọc `compose.yml`
-
-Find by key word `docker compose` to have more details
-
-```bash
-  docker compose up --build      # Build image and start all
-  docker compose up -d --build   # Detached
-  docker compose down            # Stop and delete containers
-  docker compose down -v         # Stop and delete volume (lost data)
-  docker compose logs backend    # Watch log of service backend
-  docker compose ps              # Watch status of service
 ```
-
-## Phase 3.5 — Secrets Management
-
-`Rule 1`: Ensure .env in file .gitignore
-`Rule 2`: No fallback password in source code
-`Rule 3`: Backend validated environment variable
-`Rule 4`: Check git history: `git log --all --full-history -- **/.env`
-
-## Phase 4 — CI/CD với GitHub Actions
-
-CI (Continuous Integration): Automatically checks code quality and runs tests whenever code is pushed or a pull request is created
-CD (Continuous Deployment / Delivery): Automatically deploys the application after the CI process passes successfully.
-
-- Create file `.github/workflows/ci.yml` in folder cotain frontend and backend:
-  - Install dependencies
-  - Run ESLint
-  - Check code formatting
-  - Validate build/test process
-
-- Configure `eslint.config.js` and `.prettierrc` in backend and frontend folder: to check format code:
-  - Maintain consistent code style
-  - Detect common coding issues
-  - Prevent unused variables and formatting mistakes
-
-- Setting `script` in `package.json` from both frontend and backend --> Run the following command to check for linting errors `npm run lint`
-
-## Phase 5 — Deploy to Azure VM + Docker + Nginx + Sub Domain
-
-- Goal: Deploy your Dockerized full-stack Todo application to an Ubuntu Virtual Machine on Azure and access it from any browser using the VM's public IP.
-
-> **Note**
->
-> This guide is intended for learning purposes only.
-
-### 1. Create an Azure Virtual Machine
-*Why do we need a Virtual Machine?*
-A **Virtual Machine (VM)** is simply another computer running in Microsoft's cloud.
-Instead of hosting your application on your own laptop (which must stay online 24/7), you host it on a VM so anyone on the Internet can access it anytime.
-
-#### Step 1 — Create a Virtual Machine
-Go to:
-> **Azure Portal → Virtual Machines → Create**
-
-### Basic
-
-- **Subscription:** Your Azure subscription
-- **Resource Group:** Create a new one
-- **Virtual Machine Name:** Choose any name
-- **Region:** Choose the closest region to reduce latency
-- **Availability Options:** `No infrastructure redundancy required`
-- **Image:** Latest Ubuntu Server LTS
-- **Security Type:** Default
-- **Authentication Type:** Password
-
-Create:
-
-- Username
-- Password (minimum 12 characters)
-- 
-#### Inbound Port Rules
-For learning purposes, allow:
-- **SSH (22)** — Connect to the server
-- **HTTP (80)** — Allow browsers to access your website
-
-
-#### Disks
-Choose:
-- **Standard SSD**
-Fast enough and cheaper than Premium SSD.
-
-
-#### Networking
-Keep the default configuration.
-
-
-#### Management
-Enable:
-- **Auto Shutdown**
-Choose a shutdown time to avoid unnecessary Azure charges.
-
-
-#### Monitoring
-Keep the default settings.
-Monitoring services are unnecessary for beginners.
-
-
-#### Advanced
-Keep default settings.
-
-
-#### Tags (Optional)
-Example:
-| Name | Value |
-|------|------|
-| owner | your-name |
 
 ---
 
+## Phase 3 — Docker Compose
+
+**Goal:** Start multiple services (frontend, backend, database) together with a single command.
+
+Create a `docker-compose.yml` file in the root folder that contains both `frontend/` and `backend/`.
+
+> 💡 Search `docker compose` in the official docs for full configuration details.
+
+### Commands
+
+```bash
+docker compose up --build      # Build images and start all services
+docker compose up -d --build   # Same, but detached (background)
+docker compose down            # Stop and remove containers
+docker compose down -v         # Stop and remove containers + volumes (data loss!)
+docker compose logs backend    # View logs for the backend service
+docker compose ps              # View status of all services
+```
+
+---
+
+## Phase 3.5 — Secrets Management
+
+| Rule | Description |
+|------|-------------|
+| **Rule 1** | Make sure `.env` is listed in `.gitignore` |
+| **Rule 2** | Never hardcode fallback passwords in source code |
+| **Rule 3** | Backend should validate required environment variables at startup |
+| **Rule 4** | Check git history for leaked secrets: `git log --all --full-history -- **/.env` |
+
+---
+
+## Phase 4 — CI/CD with GitHub Actions
+
+- **CI (Continuous Integration):** Automatically checks code quality and runs tests whenever code is pushed or a pull request is opened.
+- **CD (Continuous Deployment / Delivery):** Automatically deploys the application once CI passes successfully.
+
+### Setup
+
+1. Create `.github/workflows/ci.yml` in the root folder (covering both `frontend/` and `backend/`) to:
+   - Install dependencies
+   - Run ESLint
+   - Check code formatting
+   - Validate the build/test process
+
+2. Configure `eslint.config.js` and `.prettierrc` in both the `frontend/` and `backend/` folders to:
+   - Maintain a consistent code style
+   - Detect common coding issues
+   - Prevent unused variables and formatting mistakes
+
+3. Add a lint script to `package.json` in both folders:
+
+```json
+"scripts": {
+  "lint": "eslint ."
+}
+```
+
+Run it locally with:
+
+```bash
+npm run lint
+```
+
+---
+
+## Phase 5 — Deploy to Azure VM + Docker + Nginx + Sub Domain
+
+**Goal:** Deploy the Dockerized fullstack Todo app to an Ubuntu VM on Azure, accessible from any browser via the VM's public IP.
+
+> **Note:** This guide is intended for learning purposes only.
+
+### 1. Create an Azure Virtual Machine
+
+A **Virtual Machine (VM)** is simply another computer running in Microsoft's cloud. Instead of hosting the app on your own laptop (which must stay online 24/7), you host it on a VM so anyone on the Internet can reach it anytime.
+
+Go to: **Azure Portal → Virtual Machines → Create**
+
+#### Basic
+
+| Setting | Value |
+|---|---|
+| Subscription | Your Azure subscription |
+| Resource Group | Create a new one |
+| Virtual Machine Name | Any name |
+| Region | Closest region (reduces latency) |
+| Availability Options | `No infrastructure redundancy required` |
+| Image | Latest Ubuntu Server LTS |
+| Security Type | Default |
+| Authentication Type | Password |
+
+Set a username and a password (minimum 12 characters).
+
+#### Inbound Port Rules
+
+For learning purposes, allow:
+- **SSH (22)** — connect to the server
+- **HTTP (80)** — allow browsers to access your website
+
+#### Disks
+
+- **Standard SSD** — fast enough and cheaper than Premium SSD
+
+#### Networking
+
+Keep the default configuration.
+
+#### Management
+
+- Enable **Auto Shutdown** and choose a shutdown time to avoid unnecessary Azure charges.
+
+#### Monitoring / Advanced
+
+Keep default settings — unnecessary for beginners.
+
+#### Tags (optional)
+
+| Name | Value |
+|------|-------|
+| owner | your-name |
+
 Click **Review + Create** and wait for deployment to finish.
 
-## 2. Connect to the Virtual Machine
-> **Important**
->
-> Stop the VM when you're not using it to save Azure credits.
-### Step 1
-Start the VM.
-Go to:
-> **Virtual Machine → Connect**
+---
 
-### Step 2
-Connect using SSH.
+### 2. Connect to the Virtual Machine
+
+> **Important:** Stop the VM when you're not using it to save Azure credits.
+
+**Step 1 — Start the VM**, then go to **Virtual Machine → Connect**.
+
+**Step 2 — Connect via SSH:**
+
 ```bash
 ssh <username>@<PUBLIC_IP>
 ```
+
 Example:
+
 ```bash
 ssh ubuntu@20.10.30.40
 ```
 
-## Step 3
-Open HTTP traffic.
-Go to:
-> **Networking → Add inbound port rule**
-Allow:
+**Step 3 — Open HTTP traffic:**
+
+Go to **Networking → Add inbound port rule** and allow:
+
 | Port | Purpose |
 |------|---------|
 | 80 | Website (HTTP) |
+
 Click **Add**.
 
-## 3. Deploy Your Application
-> **Prerequisite**
->
-> Install WSL if you're using Windows:
->
-> https://learn.microsoft.com/windows/wsl/install
-Using WSL helps you become familiar with Linux.
+---
 
-### Step 1 — Push your code to GitHub
+### 3. Deploy Your Application
+
+> **Prerequisite (Windows users):** Install WSL to become familiar with a Linux environment: https://learn.microsoft.com/windows/wsl/install
+
+#### Step 1 — Push your code to GitHub
+
 Commit and push your latest project.
 
-### Step 2 — Install Docker
-Update packages:
+#### Step 2 — Install Docker on the VM
+
 ```bash
 sudo apt update
 sudo apt upgrade -y
-```
-Install Docker:
-```bash
 sudo apt install docker.io -y
-```
-
-Add your user to the Docker group:
-```bash
 sudo usermod -aG docker $USER
 ```
 
-Log out and log back in for the changes to take effect.
+Log out and log back in for the group change to take effect.
 
-### Step 3 — Clone your repository
+#### Step 3 — Clone your repository
+
 ```bash
 git clone https://github.com/<your-username>/<your-project>.git
-```
-
-Go to the project folder:
-```bash
 cd <your-project>
 ```
 
-### Step 4 — Configure the Frontend
-Navigate to the frontend directory.
-Edit the `.env` file:
+#### Step 4 — Configure the Frontend
+
 ```bash
 nano .env
 ```
 
 Update:
+
 ```env
 VITE_BACKEND_URL=http://<VM_PUBLIC_IP>:<BACKEND_PORT>
 ```
 
-### Step 5 — Update the Frontend Dockerfile
-Replace your development Dockerfile with a production build.
+#### Step 5 — Update the Frontend Dockerfile for Production
+
+Replace the development Dockerfile with a production, Nginx-served build:
+
 ```dockerfile
 FROM node:20-alpine AS builder
 
@@ -317,35 +325,36 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-### Step 6 — Configure the Backend
-Navigate to the backend folder.
-Edit the `.env` file:
+#### Step 6 — Configure the Backend
+
 ```bash
 nano .env
 ```
 
 Update:
+
 ```env
 CLIENT_URL=http://<VM_PUBLIC_IP>
 ```
 
-### Step 7 — Start the Containers
-Navigate to the folder containing `docker-compose.yml`.
-Run:
+#### Step 7 — Start the Containers
+
+From the folder containing `docker-compose.yml`:
+
 ```bash
 docker compose up --build -d
 ```
 
-# 🎉 Done!
+---
+
+### 🎉 Done!
+
 Open your browser and visit:
-```text
+
+```
 http://<VM_PUBLIC_IP>
 ```
-Your Todo application should now be accessible from anywhere on the Internet.
 
-<<<<<<< Updated upstream
-## Phase 6 — Kubernetes (local với minikube trước)
-=======
 ## Setting Up a Subdomain + HTTPS with DuckDNS, Docker Compose, and Let's Encrypt
 
 This guide walks through getting a free subdomain, opening the required firewall ports, and issuing a free TLS certificate via Let's Encrypt (Certbot) for a Dockerized nginx reverse proxy setup.
@@ -646,6 +655,7 @@ This runs every day at 3 AM, silently renews the cert if it's within 30 days of 
 ---
 
 ### Summary Checklist
+
 - [ ] Subdomain registered on DuckDNS and pointing to VM IP
 - [ ] Ports 80 and 443 open in cloud NSG/firewall
 - [ ] `docker-compose.yml` updated with `certbot` service and shared volumes
@@ -1228,8 +1238,5 @@ Ansible will prompt for the vault password, decrypt `vault.yml` in memory, subst
 
 
 ## Phase 8 — Monitoring & Logging (Prometheus + Grafana + Loki)
->>>>>>> Stashed changes
 
-## Phase 7 — Monitoring & Logging (Prometheus + Grafana + Loki)
 
-## Phase 8 — Infrastructure as Code (Terraform + Ansible)
