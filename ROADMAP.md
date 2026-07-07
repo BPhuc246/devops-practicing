@@ -11,13 +11,13 @@ A step-by-step roadmap for building, containerizing, testing, and deploying a fu
 - [Phase 3 — Docker Compose](#phase-3--docker-compose)
 - [Phase 3.5 — Secrets Management](#phase-35--secrets-management)
 - [Phase 4 — CI/CD with GitHub Actions](#phase-4--cicd-with-github-actions)
-- [Phase 5 — Deploy to Azure VM + Docker + Nginx](#phase-5--deploy-to-azure-vm--docker--nginx)
+- [Phase 5 — Deploy to Azure VM + Docker + Nginx + Sub Domain](#phase-5--deploy-to-azure-vm--docker--nginx--sub-domain)
 - [Phase 6 - Kubernetes Basics](#phase-6--kubernetes-basics)
 - [Phase 6.5 - Ingress](#phase-65--ingress)
 - [Phase 7 - Infrastructure as Code](#phase-7--infrastructure-as-code-terraform--ansible)
 - [Phase 7.1 - Terraform](#71-terraform)
 - [Phase 7.2 - Ansible](#72-ansible)
-
+- [Phase 8 - Monitoring and Logging](#phase-8--monitoring--logging-prometheus--grafana--loki)
 ---
 
 ## Phase 1 — Basic App Build
@@ -173,7 +173,7 @@ npm run lint
 
 ---
 
-## Phase 5 — Deploy to Azure VM + Docker + Nginx
+## Phase 5 — Deploy to Azure VM + Docker + Nginx + Sub Domain
 
 **Goal:** Deploy the Dockerized fullstack Todo app to an Ubuntu VM on Azure, accessible from any browser via the VM's public IP.
 
@@ -354,6 +354,318 @@ Open your browser and visit:
 ```
 http://<VM_PUBLIC_IP>
 ```
+
+## Setting Up a Subdomain + HTTPS with DuckDNS, Docker Compose, and Let's Encrypt
+
+This guide walks through getting a free subdomain, opening the required firewall ports, and issuing a free TLS certificate via Let's Encrypt (Certbot) for a Dockerized nginx reverse proxy setup.
+
+### Prerequisites
+
+- A VM with a public IP address
+- Docker and Docker Compose installed on the VM
+- SSH access to the VM
+- An existing `docker-compose.yml` with `frontend`, `backend`, and `nginx` services on the same Docker network
+
+---
+
+### Step 1: Get a Free Subdomain
+
+**What is a subdomain?**
+
+A subdomain is a human-readable name (like `myapp.duckdns.org`) that points to your server's IP address, so users don't need to remember or type a raw IP like `20.210.204.97`. It also enables HTTPS, since certificate authorities like Let's Encrypt issue certificates for domain names, not IP addresses.
+
+**Steps:**
+
+1. Go to [https://www.duckdns.org](https://www.duckdns.org) and sign in (via GitHub, Google, etc. — it's free).
+2. Enter a name for your domain (e.g. `myapp` → `myapp.duckdns.org`).
+3. Set the IP field to your VM's public IP address and click **update**.
+4. You now have a working domain: `http://myapp.duckdns.org` that resolves to your VM.
+
+> DuckDNS supports up to 5 free subdomains per account, useful if you want separate domains for staging, monitoring dashboards, etc.
+
+---
+
+### Step 2: Open Ports 80 and 443 in the VM's Network Security Group
+
+**Why these ports?**
+
+- **Port 80 (HTTP)** — required for normal web traffic, and also used by Let's Encrypt to verify domain ownership during certificate issuance (the "HTTP-01 challenge").
+- **Port 443 (HTTPS)** — required to serve encrypted traffic once the certificate is installed.
+
+Without these open at the cloud firewall level (Azure NSG, AWS Security Group, etc.), traffic never reaches your VM, even if the VM's local firewall and nginx are configured correctly.
+
+**Steps (Azure example):**
+
+1. Azure Portal → your VM → **Networking**
+2. Under **Inbound port rules**, click **Add**
+3. Add a rule for port `80`: Protocol `TCP`, Source `Any`, Action `Allow`
+4. Repeat for port `443`
+
+---
+
+### Step 3: Update `docker-compose.yml`
+
+Add a `certbot` service and mount shared volumes so nginx and certbot can exchange certificate files and validation challenges.
+
+```yaml
+services:
+  # ... your existing database, backend, frontend services ...
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - pern-net
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    networks:
+      - pern-net
+```
+
+**What this does:**
+
+| Piece | Purpose |
+|---|---|
+| `./certbot/conf:/etc/letsencrypt` | Shared folder where certbot stores issued certificates, and where nginx reads them from |
+| `./certbot/www:/var/www/certbot` | Shared folder used for the HTTP validation challenge — certbot writes a file here, nginx serves it publicly, Let's Encrypt checks it |
+| `ports: 80:80 / 443:443` | Exposes nginx to the internet on both HTTP and HTTPS |
+| `certbot` service has no `ports` | It doesn't need to be reachable directly — it only runs on-demand to request/renew certs |
+
+---
+
+### Step 4: Create a Temporary `nginx.conf`
+
+Before a certificate exists, nginx **cannot** listen on port 443 with SSL — there's nothing to serve yet. Use this minimal HTTP-only config first, just to handle Let's Encrypt's validation request:
+
+```nginx
+events {}
+
+http {
+    server {
+        listen 80;
+        server_name myapp.duckdns.org;
+
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+
+        location / {
+            return 200 "ok";
+        }
+    }
+}
+```
+
+---
+
+### Step 5: Deploy the Changes to the VM
+
+**If using Ansible:**
+
+```bash
+export ANSIBLE_CONFIG="$PWD/ansible.cfg"
+ansible-playbook -i your_inventory deploy.yml
+# or, if using an Ansible Vault password:
+ansible-playbook -i your_inventory deploy.yml --ask-vault-pass
+```
+
+**Then, on the VM:**
+
+```bash
+ssh <user>@<vm_ip>
+cd /opt/s
+mkdir -p ./certbot/www ./certbot/conf
+sudo docker compose up -d --build
+```
+
+---
+
+### Step 6: Verify nginx Is Serving the Challenge Path Correctly
+
+This sanity check confirms the volume mounts and config are wired correctly **before** using up Let's Encrypt's rate-limited attempts.
+
+```bash
+mkdir -p ./certbot/www/.well-known/acme-challenge/
+echo "hello" > ./certbot/www/.well-known/acme-challenge/test123
+curl http://myapp.duckdns.org/.well-known/acme-challenge/test123
+```
+
+This **must** return `hello`. If it returns a 404:
+- Confirm all volumes are mounted: `sudo docker inspect nginx --format '{{json .Mounts}}'`
+- Force-recreate the container if needed: `sudo docker compose up -d --force-recreate nginx`
+
+Once confirmed, clean up the test file:
+
+```bash
+rm ./certbot/www/.well-known/acme-challenge/test123
+```
+
+---
+
+### Step 7: Request the Real Certificate
+
+```bash
+sudo docker compose up -d nginx
+
+sudo docker compose run --rm certbot certonly \
+  --webroot --webroot-path=/var/www/certbot \
+  -d myapp.duckdns.org \
+  --email your-email@example.com \
+  --agree-tos --no-eff-email
+```
+
+**On success, you'll see:**
+
+```
+Successfully received certificate.
+Certificate is saved at: /etc/letsencrypt/live/myapp.duckdns.org/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/myapp.duckdns.org/privkey.pem
+This certificate expires on <date>.
+These files will be updated when the certificate renews.
+```
+
+**Verify the files exist:**
+
+```bash
+sudo ls -la /opt/s/certbot/conf/live/myapp.duckdns.org/
+```
+
+You should see `fullchain.pem` and `privkey.pem`.
+
+---
+
+### Step 8: Switch to the Full HTTPS `nginx.conf`
+
+Now that the certificate exists, replace the temporary config with the full version — HTTP redirects to HTTPS, and HTTPS proxies to your app:
+
+```nginx
+events {}
+
+http {
+    client_max_body_size 10M;
+    resolver 127.0.0.11 valid=10s;
+
+    server {
+        listen 80;
+        server_name myapp.duckdns.org;
+
+        # Required for Let's Encrypt validation and renewals
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+
+        # Redirect everything else to HTTPS
+        location / {
+            return 301 https://$host$request_uri;
+        }
+    }
+
+    server {
+        listen 443 ssl;
+        server_name myapp.duckdns.org;
+
+        ssl_certificate /etc/letsencrypt/live/myapp.duckdns.org/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/myapp.duckdns.org/privkey.pem;
+
+        location / {
+            set $frontend_upstream http://frontend:80;
+            proxy_pass $frontend_upstream;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_buffering off;
+        }
+
+        location /api/ {
+            set $backend_upstream http://backend:8080;
+            proxy_pass $backend_upstream;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_connect_timeout 5s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        location = /nginx-health {
+            return 200 "ok";
+            add_header Content-Type text/plain;
+        }
+    }
+}
+```
+
+> **Note:** using `set $variable` + `proxy_pass $variable` (instead of a bare `proxy_pass http://frontend:80;`) forces nginx to re-resolve the container's IP at request time via the `resolver` directive, instead of caching it once at startup. This avoids 502 errors after container restarts change the internal IP.
+
+---
+
+### Step 9: Reload nginx
+
+```bash
+sudo docker exec -it nginx nginx -t       # validate syntax first
+sudo docker exec -it nginx nginx -s reload
+```
+
+---
+
+### Step 10: Confirm HTTPS Works
+
+```bash
+curl -I https://myapp.duckdns.org
+```
+
+Expected result: `HTTP/1.1 200 OK` (or `HTTP/2 200`) with `Server: nginx`. Also check in a browser — you should see the padlock icon.
+
+---
+
+### Step 11: Set Up Auto-Renewal
+
+**Why this matters:** Let's Encrypt certificates expire every **90 days**. Without automatic renewal, your site will silently start showing browser security warnings once the cert expires.
+
+Add a scheduled job that checks daily and only renews when needed (certbot handles the "is it close to expiring" logic internally):
+
+```bash
+sudo crontab -e
+```
+
+Add this line:
+
+```
+0 3 * * * cd /opt/s && docker compose run --rm certbot renew --quiet && docker compose exec nginx nginx -s reload
+```
+
+This runs every day at 3 AM, silently renews the cert if it's within 30 days of expiry, and reloads nginx to pick up the renewed certificate.
+
+---
+
+### Summary Checklist
+
+- [ ] Subdomain registered on DuckDNS and pointing to VM IP
+- [ ] Ports 80 and 443 open in cloud NSG/firewall
+- [ ] `docker-compose.yml` updated with `certbot` service and shared volumes
+- [ ] Temporary nginx.conf deployed and challenge path verified (`curl` returns `hello`)
+- [ ] Certificate successfully issued via `certbot certonly`
+- [ ] Full HTTPS nginx.conf deployed and reloaded
+- [ ] `curl -I https://yourdomain.duckdns.org` returns `200 OK`
+- [ ] Auto-renewal cron job configured
+
+
 
 Your Todo application is now live and accessible from anywhere on the Internet.
 
