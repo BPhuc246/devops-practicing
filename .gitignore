@@ -60,3 +60,10 @@ secrets.yml
 ansible.log
 .venv/
 venv/
+
+
+# Certbot
+certbot/
+# Secrets
+*.pem
+*.key
