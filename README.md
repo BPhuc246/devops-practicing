@@ -1,8 +1,16 @@
 # DevOps Practice Roadmap — Fullstack Todo App
 
-A step-by-step roadmap for building, containerizing, testing, and deploying a fullstack Todo application — from local development to a live Azure VM.
+A step-by-step roadmap for building, containerizing, testing, and deploying a fullstack Todo application — from local development to a live Azure VM completely free.
 
 ---
+
+## Result after completed
+
+The link access: https://tododevops.duckdns.org ( i am turning off virtual machine  to save money 😭 )
+
+
+<img width="3840" height="2397" alt="image" src="https://github.com/user-attachments/assets/0e9f5264-0436-45dd-bf2b-62a341748b25" />
+
 
 ## Table of Contents
 
